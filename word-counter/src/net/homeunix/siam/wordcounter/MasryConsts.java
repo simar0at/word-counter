@@ -1,6 +1,7 @@
 package net.homeunix.siam.wordcounter;
 
 import java.util.EnumSet;
+import java.util.regex.Pattern;
 
 public class MasryConsts {
 	public static final String TA_MARBUTA = "ة";
@@ -9,7 +10,7 @@ public class MasryConsts {
 	public static final String YA = "ي";
 	
 	// when iterated over them, those affixes that occur together with the other ones should be after them
-	public static final String[] masry_homograph_end_ya = {"ى"};
+	public static final String[] masry_allograph_end = {"ى", "ة"};
 	public static final String[] masry_feminin_postfixes = {"تي", "تك", "ته", "تها", "تنا", "تكم", "تهم"};
 	public static final String[] masry_prefixes_nouns = {"ل", "ال"};
 	public static final String[] masry_postfixes_nouns = {"ين"};
@@ -18,7 +19,9 @@ public class MasryConsts {
 	public static final String[] masry_prefixes_indet = {"و", "ب"};
 	public static final String[] masry_postfixes_indet = {"ي", "ك", "كي", "ه", "ها", "نا", "كم", "هم"};
 	
-	public enum HomoGraphEndYa {HAS_HOMOGRAPH_YA};
+	public static final Pattern someArabicCharacters = Pattern.compile("[\\u0600-\\u06FF]+");
+	
+	public enum AlloGraphEnd {HAS_ALLOGRAPH_YA_ALIF_MAQSURA, HAS_ALLOGRAPH_H_TA_MARBUTA};
 	public enum PostFemininMarkers {POST_F_TI, POST_F_TAIK, POST_F_TU, POST_F_ITHA, POST_F_ITNA, POST_F_ITKUM, POST_F_ITHUM};
 	public enum PreNounMarkers {PREF_N_LI, PREF_N_AL};
 	public enum PostNounMarkers {POST_N_IN};
@@ -30,7 +33,7 @@ public class MasryConsts {
 	public static class WordCounterData {
 		// If there is no word, there is no such object just null.
 		public int count = 1;
-		public EnumSet<HomoGraphEndYa> homoGraphEndYaFound = EnumSet.noneOf(HomoGraphEndYa.class);
+		public EnumSet<AlloGraphEnd> alloGraphEndFound = EnumSet.noneOf(AlloGraphEnd.class);
 		public EnumSet<PostFemininMarkers> postFemininMakrersFound = EnumSet.noneOf(PostFemininMarkers.class);
 		public EnumSet<PreNounMarkers> preNounMarkersFound = EnumSet.noneOf(PreNounMarkers.class);
 		public EnumSet<PostNounMarkers> postNounMarkersFound = EnumSet.noneOf(PostNounMarkers.class);
@@ -40,12 +43,12 @@ public class MasryConsts {
 		public EnumSet<PostNonMarkers> postNonMarkersFound = EnumSet.noneOf(PostNonMarkers.class);
 		
 		@SuppressWarnings("rawtypes")
-		public EnumSet allEnums[] = new EnumSet[] {homoGraphEndYaFound, postFemininMakrersFound, preNounMarkersFound, postNounMarkersFound,
+		public EnumSet allEnums[] = new EnumSet[] {alloGraphEndFound, postFemininMakrersFound, preNounMarkersFound, postNounMarkersFound,
 												   preVerbMarkersFound, postVerbMarkersFound, preNonMarkersFound, postNonMarkersFound};
 		
 		public void add(WordCounterData data) {
 			this.count += data.count;
-			this.homoGraphEndYaFound.addAll(data.homoGraphEndYaFound);
+			this.alloGraphEndFound.addAll(data.alloGraphEndFound);
 			this.postFemininMakrersFound.addAll(data.postFemininMakrersFound);
 			this.preNounMarkersFound.addAll(data.preNounMarkersFound);
 			this.postNounMarkersFound.addAll(data.postNounMarkersFound);

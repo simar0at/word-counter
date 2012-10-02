@@ -106,13 +106,22 @@ public class Run {
 		
 		private class HomographEndYa implements VaryWord {
 			public String varyWord(String inputWord, String afix) {
-				if (!(inputWord.endsWith(MasryConsts.YA)))
+				if ((afix != MasryConsts.ALIF_MAQSURA) || !(inputWord.endsWith(MasryConsts.YA)))
 					return "";
 				return inputWord.substring(0, inputWord.length() - 1) + afix;
 			}
 		}
-		
+
+		private class HomographEndHa implements VaryWord {
+			public String varyWord(String inputWord, String afix) {
+				if ((afix != MasryConsts.TA_MARBUTA) || !(inputWord.endsWith(MasryConsts.H)))
+					return "";
+				return inputWord.substring(0, inputWord.length() - 1) + afix;
+			}
+		}
+
 		public VaryWord homographEndYa = new HomographEndYa();
+		public VaryWord homographEndHa = new HomographEndHa();
 		public VaryWord prefixWord = new PrefixWord();
 		public VaryWord postfixWord = new PostfixWord();
 		public VaryWord postfixFemininWord = new PostfixFemininWord();
@@ -153,9 +162,9 @@ public class Run {
             // Delimiters may start with a closing bracket or a space.
             // After that there may be one or more entities &amp; or &gt; 
             // There are one or more full stops or commas, but only if they are not preceded by a digit.
-            // There are one or more dashes, quotation marks, parentheses, slashes, stars, colons, semicolons or ampersands
+            // There are one or more dashes, quotation marks, also arabic ones, parentheses, slashes, stars, colons, semicolons or ampersands
             // and Arabic varieties of these as well as spaces and left-to-right-markers.
-            s.useDelimiter("[) ]?(?:(?:&gt)|(?:&amp)|(?:[,.%](?!\\d))|[-\\u2013|()'\"\\u201c\\u201d#&/*;:\\u060C\\s\\u200F])+");
+            s.useDelimiter("[) ]?(?:(?:&gt)|(?:&amp)|(?:[,.%](?!\\d))|[-\\u2013|()'\"\\u201c\\u201d#&/*;:?\\\\u61f!\\u060C\\s\\u200F])+");
             Map<String, WordCounterData> wordCount = new LinkedHashMap<String, WordCounterData>(128000);
             
 //            while (s.hasNext()) {
@@ -185,13 +194,20 @@ public class Run {
             // the buffer is prefilled so now process the whole text (or some number of words)
             for (int i = 0; i < 3000000; i++)
             {
-            	if (!s.hasNext()) {
-            		System.out.println("<comment>Processed " + i + " token.</comment>");
-            		break;
+            	if (s.hasNext()) {
+            		String token = s.next();
+            		if (!MasryConsts.someArabicCharacters.matcher(token).find())
+            			continue;
+            		context.add(token);
             	}
-            	context.add(s.next());
+            	else // process the last tokens
+            		context.remove();
             	// The word which shall be counted is in the middle of the context buffer.
             	String word = context.get(((CONTEXT_LENGTH + 1) / 2) - 1);
+                if (word == null) {
+        			System.out.println("<comment>Processed " + i + " token.</comment>");
+            		break;
+                }
             	// There shouldn't be any empty strings left as tokens!
             	if (word.equals("")) {
             		System.out.println("<comment>There is a tokenization problem. Check regexp against the following part of the input:");
@@ -219,21 +235,22 @@ public class Run {
             // Order does matter! TODO: How?
             removals.skipShorterThan = 0;
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
-            	removals.collect(entry, MasryConsts.masry_homograph_end_ya, removals.homographEndYa, entry.getValue().homoGraphEndYaFound, MasryConsts.HomoGraphEndYa.class);
+            	removals.collect(entry, MasryConsts.masry_allograph_end, removals.homographEndYa, entry.getValue().alloGraphEndFound, MasryConsts.AlloGraphEnd.class);
+            	removals.collect(entry, MasryConsts.masry_allograph_end, removals.homographEndHa, entry.getValue().alloGraphEndFound, MasryConsts.AlloGraphEnd.class);
             }
-            removals.skipShorterThan = 2;
-            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
-               	removals.collect(entry, MasryConsts.masry_feminin_postfixes, removals.postfixFemininWord, entry.getValue().postFemininMakrersFound, MasryConsts.PostFemininMarkers.class);
-            }
-            removals.skipShorterThan = 3;
-            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
-            	removals.collect(entry, MasryConsts.masry_prefixes_indet, removals.prefixWord, entry.getValue().preNonMarkersFound, MasryConsts.PreNonMarkers.class);
-            	removals.collect(entry, MasryConsts.masry_postfixes_indet, removals.postfixWord, entry.getValue().postNonMarkersFound, MasryConsts.PostNonMarkers.class);
-            	removals.collect(entry, MasryConsts.masry_prefixes_nouns, removals.prefixWord, entry.getValue().preNounMarkersFound, MasryConsts.PreNounMarkers.class);
-            	removals.collect(entry, MasryConsts.masry_postfixes_nouns, removals.postfixWord, entry.getValue().postNounMarkersFound, MasryConsts.PostNounMarkers.class);
-            	removals.collect(entry, MasryConsts.masry_prefixes_verbs, removals.prefixWord, entry.getValue().preVerbMarkersFound, MasryConsts.PreVerbMarkers.class);
-            	removals.collect(entry, MasryConsts.masry_postfixes_verbs, removals.postfixWord, entry.getValue().postVerbMarkersFound, MasryConsts.PostVerbMarkers.class);
-            }
+//            removals.skipShorterThan = 2;
+//            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
+//               	removals.collect(entry, MasryConsts.masry_feminin_postfixes, removals.postfixFemininWord, entry.getValue().postFemininMakrersFound, MasryConsts.PostFemininMarkers.class);
+//            }
+//            removals.skipShorterThan = 3;
+//            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
+//            	removals.collect(entry, MasryConsts.masry_prefixes_indet, removals.prefixWord, entry.getValue().preNonMarkersFound, MasryConsts.PreNonMarkers.class);
+//            	removals.collect(entry, MasryConsts.masry_postfixes_indet, removals.postfixWord, entry.getValue().postNonMarkersFound, MasryConsts.PostNonMarkers.class);
+//            	removals.collect(entry, MasryConsts.masry_prefixes_nouns, removals.prefixWord, entry.getValue().preNounMarkersFound, MasryConsts.PreNounMarkers.class);
+//            	removals.collect(entry, MasryConsts.masry_postfixes_nouns, removals.postfixWord, entry.getValue().postNounMarkersFound, MasryConsts.PostNounMarkers.class);
+//            	removals.collect(entry, MasryConsts.masry_prefixes_verbs, removals.prefixWord, entry.getValue().preVerbMarkersFound, MasryConsts.PreVerbMarkers.class);
+//            	removals.collect(entry, MasryConsts.masry_postfixes_verbs, removals.postfixWord, entry.getValue().postVerbMarkersFound, MasryConsts.PostVerbMarkers.class);
+//            }
             for (String s1: removals.toRemove)
             	wordCount.remove(s1);
 			
@@ -241,7 +258,7 @@ public class Run {
             // restore end alif maqsura as default for ambigous words.
             for (Iterator<Entry<String, WordCounterData>> iter = wordCount.entrySet().iterator(); iter.hasNext();) {
             	Map.Entry<String, WordCounterData> entry = iter.next();
-            	if (entry.getKey().endsWith(MasryConsts.YA) && !entry.getValue().homoGraphEndYaFound.isEmpty()) {
+            	if (entry.getKey().endsWith(MasryConsts.YA) && !entry.getValue().alloGraphEndFound.isEmpty()) {
             		String oldEntry = entry.getKey(); 
             		fixUps.put(oldEntry.substring(0, oldEntry.length() - 1) + MasryConsts.ALIF_MAQSURA, entry.getValue());
             		iter.remove();
@@ -255,11 +272,15 @@ public class Run {
             sortedWordCount.putAll(wordCount);
             
             // print the x most frequent words
-            int x = 1000000;
+            int x = 1000;
             int i = x;
+            int lastWordCount = 0;
 
             for (String word: sortedWordCount.keySet()) {
             	WordCounterData data = wordCount.get(word);
+            	if (--i < 1 && data.count < lastWordCount) {
+             		break;
+            	}
             	System.out.print("<word count=\"" + data.count);
             	String atts = "";
             	for (@SuppressWarnings("rawtypes") EnumSet ESet: data.allEnums) {
@@ -270,9 +291,7 @@ public class Run {
             	if (atts != "") 
             	   System.out.print("\" att=\"" + atts);
             	System.out.print("\">" + word + "</word>" + lineSeparator);
-            	if (--i == 0) {
-             		break;
-            	}
+            	lastWordCount = data.count;
             }
        		System.out.println("<comment>These are the " + (x - i) + " most frequent words.</comment>");
             System.out.println("</wordlist>");
