@@ -1,6 +1,9 @@
 package net.homeunix.siam.wordcounter;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.regex.Pattern;
 
 public class MasryConsts {
@@ -30,9 +33,12 @@ public class MasryConsts {
 	public enum PreNonMarkers {PREF_I_W, PREF_I_BI};
 	public enum PostNonMarkers {POST_I_I, POST_I_AK_IK, POST_I_KI, POST_I_H, POST_I_HA, POST_I_NA, POST_I_KUM, POST_I_HUM};
 	
+	public static final int CONTEXT_LENGTH = 15;	
+	
 	public static class WordCounterData {
 		// If there is no word, there is no such object just null.
 		public int count = 1;
+		public List<String[]> contexts = new ArrayList<String[]>();
 		public EnumSet<AlloGraphEnd> alloGraphEndFound = EnumSet.noneOf(AlloGraphEnd.class);
 		public EnumSet<PostFemininMarkers> postFemininMakrersFound = EnumSet.noneOf(PostFemininMarkers.class);
 		public EnumSet<PreNounMarkers> preNounMarkersFound = EnumSet.noneOf(PreNounMarkers.class);
@@ -46,6 +52,26 @@ public class MasryConsts {
 		public EnumSet allEnums[] = new EnumSet[] {alloGraphEndFound, postFemininMakrersFound, preNounMarkersFound, postNounMarkersFound,
 												   preVerbMarkersFound, postVerbMarkersFound, preNonMarkersFound, postNonMarkersFound};
 		
+		private void addTokenAndTypeBuffer(CircularBuffer<TokenAndType> context) {
+			int length = context.size();
+			int i = 0;
+			String[] contextStrings = new String[length];
+			for (TokenAndType tt: context) {
+				contextStrings[i++] = tt.token;
+			}
+			contexts.add(contextStrings);
+		}
+		
+		public WordCounterData(CircularBuffer<TokenAndType> context) {
+			addTokenAndTypeBuffer(context);
+		}
+		
+//		public static <T> T[] concat(T[] first, T[] second) {
+//			  T[] result = Arrays.copyOf(first, first.length + second.length);
+//			  System.arraycopy(second, 0, result, first.length, second.length);
+//			  return result;
+//			}
+
 		public void add(WordCounterData data) {
 			this.count += data.count;
 			this.alloGraphEndFound.addAll(data.alloGraphEndFound);
@@ -56,6 +82,20 @@ public class MasryConsts {
 			this.postVerbMarkersFound.addAll(data.postVerbMarkersFound);
 			this.preNonMarkersFound.addAll(data.preNonMarkersFound);
 			this.postNonMarkersFound.addAll(data.postNonMarkersFound);
+			contexts.addAll(data.contexts);
+			
+		}
+		
+		public void inc(CircularBuffer<TokenAndType> context) {
+			count++;
+			addTokenAndTypeBuffer(context);
+		}
+		
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			for (String[] context: contexts)
+				sb.append(Arrays.deepToString(context));
+			return "Count: " + count + " contexts: " + sb.toString() + " flags: unimplemented"; 
 		}
 	}
 }

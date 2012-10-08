@@ -5,32 +5,29 @@ package net.homeunix.siam.wordcounter;
  */
 
 import java.io.IOException;
-import java.io.PrintStream;
-import java.lang.reflect.Array;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.BufferOverflowException;
-import java.nio.BufferUnderflowException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.Scanner;
+import java.util.Random;
 import java.util.TreeMap;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.regex.Pattern;
 
+import net.homeunix.siam.wordcounter.TokenAndType;
 import net.homeunix.siam.wordcounter.MasryConsts.WordCounterData;
+import net.homeunix.siam.wordcounter.TokenAndType.TokenType;
 
 /**
  * Hull class
@@ -70,6 +67,27 @@ public class Run {
 		}
     	
     }
+	
+	private static final int CONTEXT_LENGTH = MasryConsts.CONTEXT_LENGTH;
+	
+	public static class TokenWithContext {
+		public String word;
+		public String[] context;
+		
+		TokenWithContext(String word, CircularBuffer<TokenAndType> context) {
+			this.word = word;
+			this.context = new String[CONTEXT_LENGTH];
+			for (int i = 0; i < CONTEXT_LENGTH; i++)
+				this.context[i] = context.get(i).token;
+		}
+		
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			for (String s: context)
+				sb.append(s);
+			return sb.toString();
+		}
+	}
 	
 	public static class CollectRemovals {
 		public int skipShorterThan = 3;
@@ -142,8 +160,32 @@ public class Run {
         	}
 		}
 	}
-
-	private static final int CONTEXT_LENGTH = 7;
+	
+//	private static String[] getContext(CircularBuffer<TokenAndType> context) {
+//		String[] result = new String[CONTEXT_LENGTH];
+//		int i = 0;
+//		for (TokenAndType tt: context) {
+//			result[i++] = tt.token;
+//		}
+//		return result;
+//	}
+	
+	private static Random rnd = new Random(22); 
+	
+	public static <T> List<T> randomSample(List<T> items, int m){
+	    ArrayList<T> res = new ArrayList<T>(m);
+	    int visited = 0;
+	    Iterator<T> it = items.iterator();
+	    while (m > 0){
+	        T item = it.next();
+	        if (rnd.nextDouble() < ((double)m)/(items.size() - visited)){
+	            res.add(item);
+	            m--;
+	        }
+	        visited++;
+	    }
+	    return res;
+	}
 	
 	/**
 	 * Old style procedural program.
@@ -153,18 +195,18 @@ public class Run {
 	 */
 	public static void main(String[] args) {
 		Path readFile = Paths.get(args[0]);
-        Scanner s = null;
+        ScannerWithDelimiterAccess s = null;
 
         try {
         	// Open the file using the Scanner class, use UTF-8 as charset.
-            s = new Scanner(Files.newBufferedReader(readFile, Charset.forName("UTF-8")));
+            s = new ScannerWithDelimiterAccess(Files.newBufferedReader(readFile, Charset.forName("UTF-8")));
             // Set what delimiters between words look like.
             // Delimiters may start with a closing bracket or a space.
             // After that there may be one or more entities &amp; or &gt; 
             // There are one or more full stops or commas, but only if they are not preceded by a digit.
             // There are one or more dashes, quotation marks, also arabic ones, parentheses, slashes, stars, colons, semicolons or ampersands
             // and Arabic varieties of these as well as spaces and left-to-right-markers.
-            s.useDelimiter("[) ]?(?:(?:&gt)|(?:&amp)|(?:[,.%](?!\\d))|[-\\u2013|()'\"\\u201c\\u201d#&/*;:?\\\\u61f!\\u060C\\s\\u200F])+");
+            s.useDelimiter(Pattern.compile("[) ]?(?:(?:&gt)|(?:&amp)|(?:[,.%](?!\\d))|[-\\u2013|()'\"\\u201c\\u201d#&/*;:?\\u061F!\\u060C\\s\\u200F])+"));
             Map<String, WordCounterData> wordCount = new LinkedHashMap<String, WordCounterData>(128000);
             
 //            while (s.hasNext()) {
@@ -176,57 +218,69 @@ public class Run {
 //            }
             	
             // create a circular buffer that contains a 7 word context of the current word.
-            CircularBuffer<String> context = new CircularBuffer<String>(CONTEXT_LENGTH);
-            // the current word should be at position position 3
-            // TODO: need more for more CONTEXT_LENGTH
-            context.add("at");
-            context.add("the");
-            context.add("beginning");
-            for (int i = 0; i < ((CONTEXT_LENGTH + 1) / 2) - 1; i++) {
+            CircularBuffer<TokenAndType> context = new CircularBuffer<TokenAndType>(CONTEXT_LENGTH);
+            // the current word should be in the middle of the buffer (at position position 3 for CONTEXT_LENGTH 7)
+            context.add(new TokenAndType("at the beginning", TokenType.UNKNOWN));
+            for (int i = 0; i < ((CONTEXT_LENGTH + 1) / 2) - 2; i++)
+            	context.add(new TokenAndType(">", TokenAndType.TokenType.UNKNOWN));
+            int cprep = 0;
+            while(true) {
             	if (!s.hasNext())
             		throw new IllegalArgumentException("Text has to have at least " + ((CONTEXT_LENGTH + 1) / 2) + " words");
-            	context.add(s.next());
+            	context.add(new TokenAndType(s.next(), TokenType.WORD));
+            	cprep++;
+            	context.add(new TokenAndType(s.lastDelimiter(), TokenType.DELIMITER));
+            	if (cprep++ == ((CONTEXT_LENGTH + 1) / 2) - 3)
+            		break;
             }
             
             System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
             System.out.println("<wordlist>");
             System.out.println("<comment>Processing text in " + args[0] + "</comment>");
-            // the buffer is prefilled so now process the whole text (or some number of words)
-            for (int i = 0; i < 3000000; i++)
+            // the buffer is prefilled so now process the whole text (or some number of words plus delimiters)
+            for (int i = 0; i < 6000000; i++)
             {
             	if (s.hasNext()) {
             		String token = s.next();
-            		if (!MasryConsts.someArabicCharacters.matcher(token).find())
+            		if (!MasryConsts.someArabicCharacters.matcher(token).find()) {
+            			context.add(new TokenAndType(token, TokenType.UNKNOWN));
+            			context.add(new TokenAndType(s.lastDelimiter(), TokenType.DELIMITER));
             			continue;
-            		context.add(token);
+            		}
+            		context.add(new TokenAndType(token, TokenType.WORD));
+            		context.add(new TokenAndType(s.lastDelimiter(), TokenType.DELIMITER));
             	}
             	else // process the last tokens
             		context.remove();
             	// The word which shall be counted is in the middle of the context buffer.
-            	String word = context.get(((CONTEXT_LENGTH + 1) / 2) - 1);
-                if (word == null) {
-        			System.out.println("<comment>Processed " + i + " token.</comment>");
+            	TokenAndType tt = context.get(((CONTEXT_LENGTH + 1) / 2) - 1);;
+                if (tt == null) {
+        			System.out.println("<comment>Processed " + i + " token and their delimiters.</comment>");
             		break;
-                }
+                }            	
+                String word = tt.token;
             	// There shouldn't be any empty strings left as tokens!
             	if (word.equals("")) {
             		System.out.println("<comment>There is a tokenization problem. Check regexp against the following part of the input:");
             		System.out.print("\u0640(");
-            		for (String oldWord: context)
-            			System.out.print(" " + oldWord);
+            		for (TokenAndType oldWord: context)
+            			System.out.print(oldWord.token);
             		System.out.println(" )\u0640</comment>");
             		continue;
             	}
+            	// below here we are concerned with real words only
+            	if (tt.type != TokenType.WORD)
+            		continue;
             	// Primitive types such as Integer are passed by value.
             	// We need a reference so use an array of Integer of length 1.
             	// Try to get the current count of this word.
             	WordCounterData data = wordCount.get(word);
             	// If there this word was already counted increase,
             	if (data != null)
-            		data.count++;
+            		data.inc(context);
             	// else add the word with a count of 1.
             	else 
-            		wordCount.put(word, new WordCounterData());
+            		wordCount.put(word, new WordCounterData(context));
             }
             
              
@@ -290,7 +344,16 @@ public class Run {
             	}
             	if (atts != "") 
             	   System.out.print("\" att=\"" + atts);
-            	System.out.print("\">" + word + "</word>" + lineSeparator);
+            	System.out.println("\">" + word);
+            	StringBuilder sb = new StringBuilder();
+            	for (String[] foundAmidst: randomSample(data.contexts, 100)) {
+            		sb.setLength(0);
+            		for (String s2: foundAmidst)
+            			sb.append(s2);
+            		
+            		System.out.println("<foundAmidst>" + sb.toString().replaceAll("&", "&amp;").replaceAll(">","&lt;") + "</foundAmidst>");
+            	}
+            	System.out.print("</word>" + lineSeparator);
             	lastWordCount = data.count;
             }
        		System.out.println("<comment>These are the " + (x - i) + " most frequent words.</comment>");

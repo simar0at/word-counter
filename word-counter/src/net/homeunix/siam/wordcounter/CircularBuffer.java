@@ -248,6 +248,13 @@ public class  CircularBuffer<T> implements Queue<T> {
 	}
 	
 	public String toString() {
+		StringBuffer sb = new StringBuffer();
+		for (Object o: toArray())
+			sb.append(o);
+		return sb.toString();
+	}
+		
+	public String getStats() {
 		return "CircularBuffer(size=" + buffer.length + ", head=" + head + ", tail=" + tail + ")";
 	}
 
