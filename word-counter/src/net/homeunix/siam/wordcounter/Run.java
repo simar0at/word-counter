@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
@@ -122,7 +123,7 @@ public class Run {
 			}
 		}
 		
-		private class HomographEndYa implements VaryWord {
+		private class AllographEndYa implements VaryWord {
 			public String varyWord(String inputWord, String afix) {
 				if ((afix != MasryConsts.ALIF_MAQSURA) || !(inputWord.endsWith(MasryConsts.YA)))
 					return "";
@@ -130,7 +131,7 @@ public class Run {
 			}
 		}
 
-		private class HomographEndHa implements VaryWord {
+		private class AllographEndHa implements VaryWord {
 			public String varyWord(String inputWord, String afix) {
 				if ((afix != MasryConsts.TA_MARBUTA) || !(inputWord.endsWith(MasryConsts.H)))
 					return "";
@@ -138,8 +139,26 @@ public class Run {
 			}
 		}
 
-		public VaryWord homographEndYa = new HomographEndYa();
-		public VaryWord homographEndHa = new HomographEndHa();
+		private class AllographAlifHamza implements VaryWord {
+			public String varyWord(String inputWord, String afix) {
+				if ((afix != MasryConsts.ALIF_HAMZA) || !(inputWord.startsWith(MasryConsts.ALIF)))
+					return "";
+				return afix + inputWord.substring(1, inputWord.length());
+			}
+		}
+		
+		private class AllographAlifHamzaBelow implements VaryWord {
+			public String varyWord(String inputWord, String afix) {
+				if ((afix != MasryConsts.ALIF_HAMZA_BELOW) || !(inputWord.startsWith(MasryConsts.ALIF)))
+					return "";
+				return afix + inputWord.substring(1, inputWord.length());
+			}
+		}
+		
+		public VaryWord allographEndYa = new AllographEndYa();
+		public VaryWord allographEndHa = new AllographEndHa();
+		public VaryWord allographAlifHamza = new AllographAlifHamza();
+		public VaryWord allographAlifHamzaBelow = new AllographAlifHamzaBelow();
 		public VaryWord prefixWord = new PrefixWord();
 		public VaryWord postfixWord = new PostfixWord();
 		public VaryWord postfixFemininWord = new PostfixFemininWord();
@@ -176,8 +195,12 @@ public class Run {
 	    ArrayList<T> res = new ArrayList<T>(m);
 	    int visited = 0;
 	    Iterator<T> it = items.iterator();
+	    T item = null;
 	    while (m > 0){
-	        T item = it.next();
+	    	try {
+	        	item = it.next(); }
+	    	catch (NoSuchElementException nse) {
+	    		break; }
 	        if (rnd.nextDouble() < ((double)m)/(items.size() - visited)){
 	            res.add(item);
 	            m--;
@@ -235,7 +258,7 @@ public class Run {
             }
             
             System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-            System.out.println("<wordlist>");
+            System.out.println("<tokenlist>");
             System.out.println("<comment>Processing text in " + args[0] + "</comment>");
             // the buffer is prefilled so now process the whole text (or some number of words plus delimiters)
             for (int i = 0; i < 6000000; i++)
@@ -289,8 +312,10 @@ public class Run {
             // Order does matter! TODO: How?
             removals.skipShorterThan = 0;
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
-            	removals.collect(entry, MasryConsts.masry_allograph_end, removals.homographEndYa, entry.getValue().alloGraphEndFound, MasryConsts.AlloGraphEnd.class);
-            	removals.collect(entry, MasryConsts.masry_allograph_end, removals.homographEndHa, entry.getValue().alloGraphEndFound, MasryConsts.AlloGraphEnd.class);
+            	removals.collect(entry, MasryConsts.masry_allograph, removals.allographEndYa, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
+            	removals.collect(entry, MasryConsts.masry_allograph, removals.allographEndHa, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
+            	removals.collect(entry, MasryConsts.masry_allograph, removals.allographAlifHamza, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
+            	removals.collect(entry, MasryConsts.masry_allograph, removals.allographAlifHamzaBelow, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
             }
 //            removals.skipShorterThan = 2;
 //            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
@@ -312,7 +337,7 @@ public class Run {
             // restore end alif maqsura as default for ambigous words.
             for (Iterator<Entry<String, WordCounterData>> iter = wordCount.entrySet().iterator(); iter.hasNext();) {
             	Map.Entry<String, WordCounterData> entry = iter.next();
-            	if (entry.getKey().endsWith(MasryConsts.YA) && !entry.getValue().alloGraphEndFound.isEmpty()) {
+            	if (entry.getKey().endsWith(MasryConsts.YA) && !entry.getValue().alloGraphFound.isEmpty()) {
             		String oldEntry = entry.getKey(); 
             		fixUps.put(oldEntry.substring(0, oldEntry.length() - 1) + MasryConsts.ALIF_MAQSURA, entry.getValue());
             		iter.remove();
@@ -326,7 +351,7 @@ public class Run {
             sortedWordCount.putAll(wordCount);
             
             // print the x most frequent words
-            int x = 1000;
+            int x = 200;
             int i = x;
             int lastWordCount = 0;
 
@@ -335,7 +360,7 @@ public class Run {
             	if (--i < 1 && data.count < lastWordCount) {
              		break;
             	}
-            	System.out.print("<word count=\"" + data.count);
+            	System.out.print("<t count=\"" + data.count);
             	String atts = "";
             	for (@SuppressWarnings("rawtypes") EnumSet ESet: data.allEnums) {
             		String attsPart = ESet.toString();
@@ -348,16 +373,19 @@ public class Run {
             	StringBuilder sb = new StringBuilder();
             	for (String[] foundAmidst: randomSample(data.contexts, 100)) {
             		sb.setLength(0);
-            		for (String s2: foundAmidst)
-            			sb.append(s2);
-            		
-            		System.out.println("<foundAmidst>" + sb.toString().replaceAll("&", "&amp;").replaceAll(">","&lt;") + "</foundAmidst>");
+            		for (String s2: foundAmidst) {
+            			if (s2 == null) break;
+            			sb.append("<t>");
+            			sb.append(s2.replaceAll("&", "&amp;").replaceAll("<","&lt;"));
+            			sb.append("</t>");
+            		}            		
+            		System.out.println("<tic>" + sb.toString() + "</tic>");
             	}
-            	System.out.print("</word>" + lineSeparator);
+            	System.out.print("</t>" + lineSeparator);
             	lastWordCount = data.count;
             }
        		System.out.println("<comment>These are the " + (x - i) + " most frequent words.</comment>");
-            System.out.println("</wordlist>");
+            System.out.println("</tokenlist>");
         } catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

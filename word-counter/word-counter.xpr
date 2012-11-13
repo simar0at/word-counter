@@ -1,13 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project version="14.0">
+<project version="14.1">
     <meta>
         <filters directoryPatterns="" filePatterns="" positiveFilePatterns="" showHiddenFiles="false"/>
         <options>
-            <serialized version="14.0" xml:space="preserve">
+            <serialized version="14.1" xml:space="preserve">
                 <map>
                     <entry>
                         <String>scenario.associations</String>
                         <scenarioAssociation-array>
+                            <scenarioAssociation>
+                                <field name="url">
+                                    <String>oxygen:/exist-2.1-201210$Admin%20an%20exist%20server/db/word-counter/context-for-words.xquery</String>
+                                </field>
+                                <field name="scenarioIds">
+                                    <list>
+                                        <String>just-words</String>
+                                    </list>
+                                </field>
+                                <field name="scenarioTypes">
+                                    <list>
+                                        <String>XQUERY</String>
+                                    </list>
+                                </field>
+                            </scenarioAssociation>
+                            <scenarioAssociation>
+                                <field name="url">
+                                    <String>oxygen:/exist-2.1-201210$Admin%20an%20exist%20server/db/word-counter/just-words.xquery</String>
+                                </field>
+                                <field name="scenarioIds">
+                                    <list>
+                                        <String>just-words</String>
+                                    </list>
+                                </field>
+                                <field name="scenarioTypes">
+                                    <list>
+                                        <String>XQUERY</String>
+                                    </list>
+                                </field>
+                            </scenarioAssociation>
                             <scenarioAssociation>
                                 <field name="url">
                                     <String>just-words.xquery</String>
@@ -105,7 +135,7 @@
                                     <String-array/>
                                 </field>
                                 <field name="xslTransformer">
-                                    <String>Saxon-HE XQuery</String>
+                                    <String>Admin an exist server</String>
                                 </field>
                                 <field name="extensionURLs">
                                     <String-array/>
@@ -121,5 +151,6 @@
         <file name="context-for-words.xquery"/>
         <file name="just-words.xquery"/>
         <file name="out.xml"/>
+        <file name="untitled.xml"/>
     </projectTree>
 </project>
