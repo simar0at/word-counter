@@ -13,9 +13,10 @@ public class MasryConsts {
 	public static final String YA = "ي";
 	public static final String ALIF = "ا";
 	public static final String ALIF_HAMZA = "أ";
-	public static final String ALIF_HAMZA_BELOW = "إ";	
+	public static final String ALIF_HAMZA_BELOW = "إ";
+	public static final String TATWEEL = "ـ";
 	// when iterated over them, those affixes that occur together with the other ones should be after them
-	public static final String[] masry_allograph = {"ى", "ة", "أ", "إ"};
+	public static final String[] masry_allograph = {"ى", "ة", "أ", "إ", "ـ"};
 	public static final String[] masry_feminin_postfixes = {"تي", "تك", "ته", "تها", "تنا", "تكم", "تهم"};
 	public static final String[] masry_prefixes_nouns = {"ل", "ال"};
 	public static final String[] masry_postfixes_nouns = {"ين"};
@@ -26,7 +27,7 @@ public class MasryConsts {
 	
 	public static final Pattern someArabicCharacters = Pattern.compile("[\\u0600-\\u06FF]+");
 	
-	public enum AlloGraphEnd {HAS_ALLOGRAPH_END_YA_ALIF_MAQSURA, HAS_ALLOGRAPH_END_H_TA_MARBUTA, HAS_ALLOGRAPH_ALIF_HAMZA, HAS_ALLOGRAPH_ALIF_HAMZA_BELOW};
+	public enum AlloGraphEnd {HAS_ALLOGRAPH_END_YA_ALIF_MAQSURA, HAS_ALLOGRAPH_END_H_TA_MARBUTA, HAS_ALLOGRAPH_ALIF_HAMZA, HAS_ALLOGRAPH_ALIF_HAMZA_BELOW, HAS_ALLOGRAPH_TATWEEL};
 	public enum PostFemininMarkers {POST_F_TI, POST_F_TAIK, POST_F_TU, POST_F_ITHA, POST_F_ITNA, POST_F_ITKUM, POST_F_ITHUM};
 	public enum PreNounMarkers {PREF_N_LI, PREF_N_AL};
 	public enum PostNounMarkers {POST_N_IN};
@@ -38,9 +39,19 @@ public class MasryConsts {
 	public static final int CONTEXT_LENGTH = 15;	
 	
 	public static class WordCounterData {
+		public class ContextData {
+			public String[] context;
+			public String word;
+			ContextData (String[] context, String word) {
+				this.context = context;
+				this.word = word;
+			}
+		}
 		// If there is no word, there is no such object just null.
-		public int count = 1;
-		public List<String[]> contexts = new ArrayList<String[]>();
+		public int[] counts = {1};
+		public String[] words = new String[] {""};
+		public String[] stems = new String[] {""};
+		public List<ContextData> contexts = new ArrayList<ContextData>();
 		public EnumSet<AlloGraphEnd> alloGraphFound = EnumSet.noneOf(AlloGraphEnd.class);
 		public EnumSet<PostFemininMarkers> postFemininMakrersFound = EnumSet.noneOf(PostFemininMarkers.class);
 		public EnumSet<PreNounMarkers> preNounMarkersFound = EnumSet.noneOf(PreNounMarkers.class);
@@ -54,18 +65,20 @@ public class MasryConsts {
 		public EnumSet allEnums[] = new EnumSet[] {alloGraphFound, postFemininMakrersFound, preNounMarkersFound, postNounMarkersFound,
 												   preVerbMarkersFound, postVerbMarkersFound, preNonMarkersFound, postNonMarkersFound};
 		
-		private void addTokenAndTypeBuffer(CircularBuffer<TokenAndType> context) {
+		private void addTokenAndTypeBuffer(CircularBuffer<TokenAndType> context, String word) {
 			int length = context.size();
 			int i = 0;
 			String[] contextStrings = new String[length];
 			for (TokenAndType tt: context) {
 				contextStrings[i++] = tt.token;
 			}
-			contexts.add(contextStrings);
+			contexts.add(new ContextData(contextStrings, word));
+			if (words[0].equals(""))
+				words[0] = word;
 		}
 		
-		public WordCounterData(CircularBuffer<TokenAndType> context) {
-			addTokenAndTypeBuffer(context);
+		public WordCounterData(CircularBuffer<TokenAndType> context, String word) {
+			addTokenAndTypeBuffer(context, word);
 		}
 		
 //		public static <T> T[] concat(T[] first, T[] second) {
@@ -75,7 +88,6 @@ public class MasryConsts {
 //			}
 
 		public void add(WordCounterData data) {
-			this.count += data.count;
 			this.alloGraphFound.addAll(data.alloGraphFound);
 			this.postFemininMakrersFound.addAll(data.postFemininMakrersFound);
 			this.preNounMarkersFound.addAll(data.preNounMarkersFound);
@@ -85,19 +97,46 @@ public class MasryConsts {
 			this.preNonMarkersFound.addAll(data.preNonMarkersFound);
 			this.postNonMarkersFound.addAll(data.postNonMarkersFound);
 			contexts.addAll(data.contexts);
-			
+			int oldLength = words.length;
+			this.words = Arrays.copyOf(words, words.length + data.words.length);
+			this.stems = Arrays.copyOf(stems, stems.length + data.stems.length);
+			this.counts = Arrays.copyOf(counts, counts.length + data.counts.length); 
+			for (int i = 0; i < data.words.length; i++) {
+			  this.words[oldLength + i] = data.words[i];
+			  this.stems[oldLength + i] = data.stems[i];
+			  this.counts[oldLength + i] = data.counts[i];
+			}
 		}
 		
 		public void inc(CircularBuffer<TokenAndType> context) {
-			count++;
-			addTokenAndTypeBuffer(context);
+			counts[0]++;
+			addTokenAndTypeBuffer(context, words[0]);
 		}
 		
 		public String toString() {
 			StringBuilder sb = new StringBuilder();
-			for (String[] context: contexts)
-				sb.append(Arrays.deepToString(context));
-			return "Count: " + count + " contexts: " + sb.toString() + " flags: unimplemented"; 
+			String wordsList = "";
+			String stemsList = "";
+			int count = 0;
+			for (String s: words) {
+				sb.append(s);
+				sb.append(", ");
+			}
+			sb.setLength(sb.length() - 2);
+			wordsList = sb.toString();
+			sb.setLength(0);
+			for (String s: stems) {
+				sb.append(s);
+				sb.append(", ");
+			}
+			sb.setLength(sb.length() - 2);
+			wordsList = sb.toString();
+			sb.setLength(0);
+			for (ContextData context: contexts)
+				sb.append(Arrays.deepToString(context.context));
+			for (int c: counts)
+				count += c;
+			return "Words: " + wordsList + " stems: " + stemsList + " count: " + count + " contexts: " + sb.toString() + " flags: unimplemented"; 
 		}
 	}
 }

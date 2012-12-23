@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -26,6 +25,9 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
+import org.plyjy.factory.PySystemObjectFactory;
+
+import net.homeunix.siam.stemmer.StemmerI;
 import net.homeunix.siam.wordcounter.TokenAndType;
 import net.homeunix.siam.wordcounter.MasryConsts.WordCounterData;
 import net.homeunix.siam.wordcounter.TokenAndType.TokenType;
@@ -39,6 +41,9 @@ import net.homeunix.siam.wordcounter.TokenAndType.TokenType;
 public class Run {
 	
 	public static final String lineSeparator = System.getProperty("line.separator");
+	
+	public static PySystemObjectFactory<StemmerI> isriFactory = new PySystemObjectFactory<StemmerI>(
+            StemmerI.class, "nltk", "ISRIStemmer");
 	
 	/**
 	 * To get a word/frequency map sorted by the frequency of a word this seems to be the most simple solution.
@@ -59,7 +64,13 @@ public class Run {
 		@Override
 		public int compare(String o1, String o2) {
 			// Sort the most frequently used first.
-			int ret = -Integer.compare(base.get(o1).count, base.get(o2).count);
+			int countO1 = 0;
+			int countO2 = 0;
+			for (int c: base.get(o1).counts)
+				countO1 += c;
+			for (int c: base.get(o2).counts)
+				countO2 += c;
+			int ret = -Integer.compare(countO1, countO2);
 			// If frequency is the same sort alphabetically ascending
 			if (0 == ret) {
 				ret = o1.compareTo(o2);
@@ -131,6 +142,14 @@ public class Run {
 			}
 		}
 
+		private class AllographEndTatweel implements VaryWord {
+			public String varyWord(String inputWord, String afix) {
+				if ((afix != MasryConsts.TATWEEL) || !(inputWord.length() < 3))
+					return "";
+				return inputWord + afix;
+			}
+		}
+		
 		private class AllographEndHa implements VaryWord {
 			public String varyWord(String inputWord, String afix) {
 				if ((afix != MasryConsts.TA_MARBUTA) || !(inputWord.endsWith(MasryConsts.H)))
@@ -157,6 +176,7 @@ public class Run {
 		
 		public VaryWord allographEndYa = new AllographEndYa();
 		public VaryWord allographEndHa = new AllographEndHa();
+		public VaryWord allographEndTatweel = new AllographEndTatweel();
 		public VaryWord allographAlifHamza = new AllographAlifHamza();
 		public VaryWord allographAlifHamzaBelow = new AllographAlifHamzaBelow();
 		public VaryWord prefixWord = new PrefixWord();
@@ -189,7 +209,38 @@ public class Run {
 //		return result;
 //	}
 	
-	private static Random rnd = new Random(22); 
+	private static Random rnd = new Random(22);
+	
+	public static List<WordCounterData.ContextData> randomSample(WordCounterData counterData, int m) {
+		if (counterData.counts.length == 1)
+			return randomSample(counterData.contexts, m);
+		else {
+			long[] ratios = new long[counterData.counts.length];
+			List<WordCounterData.ContextData> result = new ArrayList<WordCounterData.ContextData>();
+			int sum = 0;
+			for (int c: counterData.counts)
+				sum += c;
+			double ratio = 1.0;
+			if (sum > m)
+				ratio = (double)m / (double)sum;
+			for (int i = 0; i < ratios.length; i++)
+				ratios[i] = Math.round((double)counterData.counts[i] * ratio);
+			long ratioSum = 0;
+			for (long r: ratios)
+				ratioSum += r;
+			if (ratioSum > m)
+				ratios[0] -= 1;
+			else if (ratioSum < m)
+				ratios[0] += 1;
+			int lastStart = 0;
+			for (int i = 0; i < counterData.counts.length; i++) {
+				int contextLength = counterData.counts[i];
+				result.addAll(randomSample(counterData.contexts.subList(lastStart, lastStart + contextLength - 1), (int)ratios[i]));
+				lastStart += contextLength;
+			}
+			return result;
+		}
+	}
 	
 	public static <T> List<T> randomSample(List<T> items, int m){
 	    ArrayList<T> res = new ArrayList<T>(m);
@@ -217,8 +268,17 @@ public class Run {
 	 * On argument: The file to process.
 	 */
 	public static void main(String[] args) {
+		if (args.length < 3) {
+			System.out.println("Usage: " + lineSeparator +
+					"  java -jar word-counter.jar <Text-File> <x most frequent token> <max number of samples per token>." + lineSeparator +
+					"  The output of this program is in XML format.");
+			System.exit(0);
+		}
 		Path readFile = Paths.get(args[0]);
         ScannerWithDelimiterAccess s = null;
+        
+        int xMostFrequentToken = Integer.parseInt(args[1]);
+        int numberOfSamplesPerToken = Integer.parseInt(args[2]);
 
         try {
         	// Open the file using the Scanner class, use UTF-8 as charset.
@@ -258,10 +318,12 @@ public class Run {
             }
             
             System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-            System.out.println("<tokenlist>");
+            System.out.println("<tokenlist xmlns=\"http://www.siam.homeunix.net/tokenlist\">");
             System.out.println("<comment>Processing text in " + args[0] + "</comment>");
             // the buffer is prefilled so now process the whole text (or some number of words plus delimiters)
-            for (int i = 0; i < 6000000; i++)
+            int overallTokenCount = 0;
+            // for (int i = 0; i < 6000000; i++)
+            for (int i = 0; true; i++)
             {
             	if (s.hasNext()) {
             		String token = s.next();
@@ -279,6 +341,7 @@ public class Run {
             	TokenAndType tt = context.get(((CONTEXT_LENGTH + 1) / 2) - 1);;
                 if (tt == null) {
         			System.out.println("<comment>Processed " + i + " token and their delimiters.</comment>");
+        			overallTokenCount = i;
             		break;
                 }            	
                 String word = tt.token;
@@ -303,15 +366,19 @@ public class Run {
             		data.inc(context);
             	// else add the word with a count of 1.
             	else 
-            		wordCount.put(word, new WordCounterData(context));
+            		wordCount.put(word, new WordCounterData(context, word));
             }
             
-             
+            StemmerI isri = isriFactory.createObject();
+            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
+            	entry.getValue().stems[0] = isri.stem(entry.getKey());
+            }
 
             CollectRemovals removals = new CollectRemovals(wordCount);
             // Order does matter! TODO: How?
             removals.skipShorterThan = 0;
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
+            	removals.collect(entry, MasryConsts.masry_allograph, removals.allographEndTatweel, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
             	removals.collect(entry, MasryConsts.masry_allograph, removals.allographEndYa, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
             	removals.collect(entry, MasryConsts.masry_allograph, removals.allographEndHa, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
             	removals.collect(entry, MasryConsts.masry_allograph, removals.allographAlifHamza, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
@@ -351,16 +418,20 @@ public class Run {
             sortedWordCount.putAll(wordCount);
             
             // print the x most frequent words
-            int x = 200;
-            int i = x;
+            int i = xMostFrequentToken;
             int lastWordCount = 0;
+            int displayedTokenSum = 0;
 
             for (String word: sortedWordCount.keySet()) {
             	WordCounterData data = wordCount.get(word);
-            	if (--i < 1 && data.count < lastWordCount) {
+            	int count = 0;
+            	for (int c: data.counts)
+            		count += c;
+            	if (--i < 1 && count < lastWordCount) {
              		break;
             	}
-            	System.out.print("<t count=\"" + data.count);
+            	displayedTokenSum += count;
+            	System.out.print("<t count=\"" + count);
             	String atts = "";
             	for (@SuppressWarnings("rawtypes") EnumSet ESet: data.allEnums) {
             		String attsPart = ESet.toString();
@@ -371,9 +442,12 @@ public class Run {
             	   System.out.print("\" att=\"" + atts);
             	System.out.println("\">" + word);
             	StringBuilder sb = new StringBuilder();
-            	for (String[] foundAmidst: randomSample(data.contexts, 100)) {
+            	for (String stem: data.stems) {
+            		System.out.print("<stem>" + stem + "</stem>" + lineSeparator);
+            	}
+            	for (WordCounterData.ContextData foundAmidst: randomSample(data, numberOfSamplesPerToken)) {
             		sb.setLength(0);
-            		for (String s2: foundAmidst) {
+            		for (String s2: foundAmidst.context) {
             			if (s2 == null) break;
             			sb.append("<t>");
             			sb.append(s2.replaceAll("&", "&amp;").replaceAll("<","&lt;"));
@@ -382,9 +456,11 @@ public class Run {
             		System.out.println("<tic>" + sb.toString() + "</tic>");
             	}
             	System.out.print("</t>" + lineSeparator);
-            	lastWordCount = data.count;
+            	lastWordCount = count;
             }
-       		System.out.println("<comment>These are the " + (x - i) + " most frequent words.</comment>");
+       		System.out.println("<comment>These are the " + (xMostFrequentToken - i) + " most frequent token.");
+       		System.out.println("There were " + (overallTokenCount - displayedTokenSum) + " more token " +
+       				"found in the input Text</comment>");
             System.out.println("</tokenlist>");
         } catch (IOException e) {
 			// TODO Auto-generated catch block
