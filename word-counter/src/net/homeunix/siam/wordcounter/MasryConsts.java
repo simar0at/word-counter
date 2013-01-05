@@ -6,6 +6,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import net.homeunix.siam.wordcounter.TokenAndType.TokenType;
+
 public class MasryConsts {
 	public static final String TA_MARBUTA = "ة";
 	public static final String H = "ه";
@@ -40,9 +42,11 @@ public class MasryConsts {
 	
 	public static class WordCounterData {
 		public class ContextData {
+			public TokenType[] types;
 			public String[] context;
 			public String word;
-			ContextData (String[] context, String word) {
+			ContextData (String[] context, TokenType[] types, String word) {
+				this.types = types;
 				this.context = context;
 				this.word = word;
 			}
@@ -69,10 +73,12 @@ public class MasryConsts {
 			int length = context.size();
 			int i = 0;
 			String[] contextStrings = new String[length];
+			TokenType[] contextTypes = new TokenType[length];
 			for (TokenAndType tt: context) {
-				contextStrings[i++] = tt.token;
+				contextStrings[i] = tt.token;
+				contextTypes[i++] = tt.type;
 			}
-			contexts.add(new ContextData(contextStrings, word));
+			contexts.add(new ContextData(contextStrings, contextTypes, word));
 			if (words[0].equals(""))
 				words[0] = word;
 		}

@@ -209,9 +209,10 @@ public class Run {
 //		return result;
 //	}
 	
-	private static Random rnd = new Random(22);
+	public static Random rnd = new Random(22);
 	
 	public static List<WordCounterData.ContextData> randomSample(WordCounterData counterData, int m) {
+		rnd = new Random(22);
 		if (counterData.counts.length == 1)
 			return randomSample(counterData.contexts, m);
 		else {
@@ -289,7 +290,7 @@ public class Run {
             // There are one or more full stops or commas, but only if they are not preceded by a digit.
             // There are one or more dashes, quotation marks, also arabic ones, parentheses, slashes, stars, colons, semicolons or ampersands
             // and Arabic varieties of these as well as spaces and left-to-right-markers.
-            s.useDelimiter(Pattern.compile("[) ]?(?:(?:&gt)|(?:&amp)|(?:[,.%](?!\\d))|[-\\u2013|()'\"\\u201c\\u201d#&/*;:?\\u061F!\\u060C\\s\\u200F])+"));
+            s.useDelimiter(Pattern.compile("[) ]?(?:(?:&lt)|(?:&gt)|(?:&amp)|(?:[,.%](?!\\d))|[-\\u06D4\\u2013\\u2014=|()<>\\u27E8\\u27E9'\\u2018\\u2019\"\\u2039\\u203A\\u201c\\u201d#&/*\\u2022;:?\\u061F!\\u060C\\s\\u200F\\u202E\\u202C\\u200D])+"));
             Map<String, WordCounterData> wordCount = new LinkedHashMap<String, WordCounterData>(128000);
             
 //            while (s.hasNext()) {
@@ -447,20 +448,38 @@ public class Run {
             	}
             	for (WordCounterData.ContextData foundAmidst: randomSample(data, numberOfSamplesPerToken)) {
             		sb.setLength(0);
-            		for (String s2: foundAmidst.context) {
+            		String s2 = "";
+            		TokenType t2 = TokenType.UNKNOWN;
+            		for (int j = 0; j < foundAmidst.context.length; j++) {
+            			s2 = foundAmidst.context[j];
             			if (s2 == null) break;
-            			sb.append("<t>");
-            			sb.append(s2.replaceAll("&", "&amp;").replaceAll("<","&lt;"));
-            			sb.append("</t>");
+            			switch (foundAmidst.types[j]) {
+						case WORD:
+	            			sb.append("<t>");
+	            			sb.append(s2.replaceAll("&", "&amp;").replaceAll("<","&lt;"));
+	            			sb.append("</t>");															
+							break;
+						case DELIMITER:
+	            			sb.append("<s>");
+	            			sb.append(s2.replaceAll("&", "&amp;").replaceAll("<","&lt;"));
+	            			sb.append("</s>");								
+							break;
+
+						case UNKNOWN:
+	            			sb.append("<u>");
+	            			sb.append(s2.replaceAll("&", "&amp;").replaceAll("<","&lt;"));
+	            			sb.append("</u>");	
+							break;
+						}
             		}            		
             		System.out.println("<tic>" + sb.toString() + "</tic>");
             	}
             	System.out.print("</t>" + lineSeparator);
             	lastWordCount = count;
             }
-       		System.out.println("<comment>These are the " + (xMostFrequentToken - i) + " most frequent token.");
-       		System.out.println("There were " + (overallTokenCount - displayedTokenSum) + " more token " +
-       				"found in the input Text</comment>");
+       		System.err.println("<comment>These are the " + (xMostFrequentToken - i) + " most frequent token with possble variants.");
+       		System.err.println("There were " + (overallTokenCount - displayedTokenSum) + " more token " +
+       				"(including those declared unknown by regexp) found in the input text</comment>");
             System.out.println("</tokenlist>");
         } catch (IOException e) {
 			// TODO Auto-generated catch block
