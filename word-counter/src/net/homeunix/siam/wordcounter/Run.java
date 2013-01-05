@@ -372,7 +372,7 @@ public class Run {
             
             StemmerI isri = isriFactory.createObject();
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
-            	entry.getValue().stems[0] = isri.stem(entry.getKey());
+            	entry.getValue().stems[0] = isri.stem(entry.getKey()).toArray(entry.getValue().stems[0]);
             }
 
             CollectRemovals removals = new CollectRemovals(wordCount);
@@ -443,7 +443,8 @@ public class Run {
             	   System.out.print("\" att=\"" + atts);
             	System.out.println("\">" + word);
             	StringBuilder sb = new StringBuilder();
-            	for (String stem: data.stems) {
+            	for (String[] stema: data.stems) 
+            	   for (String stem: stema){
             		System.out.print("<stem>" + stem + "</stem>" + lineSeparator);
             	}
             	for (WordCounterData.ContextData foundAmidst: randomSample(data, numberOfSamplesPerToken)) {

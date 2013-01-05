@@ -144,24 +144,24 @@ class ISRIStemmer(StemmerI):
 
         self.stm = token
         self.norm(1)       #rem  remove diacritics which representing Arabic short vowels
-        if self.stm in self.stop_words: return self.stm     #rem exclude stop words from being processed
+        if self.stm in self.stop_words: return [self.stm, ]      #rem exclude stop words from being processed
         self.pre32()        #rem remove length three and length two prefixes in this order
         self.suf32()        #rem remove length three and length two suffixes in this order
         self.waw()          #rem remove connective ‘و’ if it precedes a word beginning with ‘و’
         self.norm(2)       #rem normalize initial hamza to bare alif
-        if len(self.stm)<=3: return self.stm     #rem return stem if less than or equal to three
+        if len(self.stm)<=3: return [self.stm, ]      #rem return stem if less than or equal to three
 
         if len(self.stm)==4:       #rem length 4 word
             self.pro_w4()
-            return self.stm
+            return [self.stm, ] 
         elif len(self.stm)==5:     #rem length 5 word
             self.pro_w53()
             self.end_w5()
-            return self.stm
+            return [self.stm, ] 
         elif len(self.stm)==6:     #rem length 6 word
             self.pro_w6()
             self.end_w6()
-            return self.stm
+            return [self.stm, ] 
         elif len(self.stm)==7:     #rem length 7 word
             self.suf1()
             if len(self.stm)==7:
@@ -169,8 +169,8 @@ class ISRIStemmer(StemmerI):
             if len(self.stm)==6:
                 self.pro_w6()
                 self.end_w6()
-                return self.stm
-        return self.stm              #rem if word length >7 , then no stemming
+                return [self.stm, ]
+        return [self.stm, ]              #rem if word length >7 , then no stemming
 
     def norm(self, num):
         """
@@ -382,5 +382,6 @@ class ISRIStemmer(StemmerI):
 
 
 if __name__ == "__main__":
-    import doctest
-    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
+    stemmer = ISRIStemmer()
+    stemmer.stem("يقول")
+    

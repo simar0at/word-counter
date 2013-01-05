@@ -54,7 +54,7 @@ public class MasryConsts {
 		// If there is no word, there is no such object just null.
 		public int[] counts = {1};
 		public String[] words = new String[] {""};
-		public String[] stems = new String[] {""};
+		public String[][] stems = new String[][] {{""}};
 		public List<ContextData> contexts = new ArrayList<ContextData>();
 		public EnumSet<AlloGraphEnd> alloGraphFound = EnumSet.noneOf(AlloGraphEnd.class);
 		public EnumSet<PostFemininMarkers> postFemininMakrersFound = EnumSet.noneOf(PostFemininMarkers.class);
@@ -131,10 +131,11 @@ public class MasryConsts {
 			sb.setLength(sb.length() - 2);
 			wordsList = sb.toString();
 			sb.setLength(0);
-			for (String s: stems) {
+			for (String[] sa: stems) 
+			   for (String s: sa){
 				sb.append(s);
 				sb.append(", ");
-			}
+			  }
 			sb.setLength(sb.length() - 2);
 			wordsList = sb.toString();
 			sb.setLength(0);

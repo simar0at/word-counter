@@ -1,5 +1,7 @@
 package net.homeunix.siam.stemmer;
 
+import java.util.List;
+
 public interface StemmerI {
-	public String stem(String token);
+	public List<String> stem(String token);
 }
