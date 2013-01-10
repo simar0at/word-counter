@@ -85,7 +85,8 @@ class ISRIStemmer(StemmerI):
         self.re_hamza = re.compile(ur'[ءؤئ]')
         self.re_intial_hamza = re.compile(ur'^[آأإ]')
 
-        self.stop_words = [u'يكون',
+        self.stop_words = [] 
+        self.stop_wordsx= [u'يكون',
                            u'يقول',
                            u'وليس',
                            u'وكان',

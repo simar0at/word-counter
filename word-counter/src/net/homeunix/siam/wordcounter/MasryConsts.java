@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import net.homeunix.siam.wordcounter.Run.CollectRemovals.VaryWord;
 import net.homeunix.siam.wordcounter.TokenAndType.TokenType;
 
 public class MasryConsts {
@@ -21,11 +22,30 @@ public class MasryConsts {
 	public static final String[] masry_allograph = {"ى", "ة", "أ", "إ", "ـ"};
 	public static final String[] masry_feminin_postfixes = {"تي", "تك", "ته", "تها", "تنا", "تكم", "تهم"};
 	public static final String[] masry_prefixes_nouns = {"ل", "ال"};
+	public static final String[][] masry_prefixes_nouns_stopwords = new String[][]{
+		new String[] {"لفى"},
+		new String[] {"اللى"}
+	};
 	public static final String[] masry_postfixes_nouns = {"ين"};
+	public static final String[][] masry_postfixes_nouns_stopwords = new String[][]{
+		new String[] {}
+	};
 	public static final String[] masry_prefixes_verbs = {"ما", "ح", "ب", "ا", "ت", "ي", "ن"};
+	public static final String[][] masry_prefixes_verbs_stopwords = new String[][]{
+		new String[] {}
+	};
 	public static final String[] masry_postfixes_verbs = {"ش", "ني", "وا", "و", "ي"};
+	public static final String[][] masry_postfixes_verbs_stopwords = new String[][]{
+		new String[] {}
+	};
 	public static final String[] masry_prefixes_indet = {"و", "ب"};
+	public static final String[][] masry_prefixes_indet_stopwords = new String[][]{
+		new String[] {}
+	};
 	public static final String[] masry_postfixes_indet = {"ي", "ك", "كي", "ه", "ها", "نا", "كم", "هم"};
+	public static final String[][] masry_postfixes_indet_stopwords = new String[][]{
+		new String[] {}
+	};
 	
 	public static final Pattern someArabicCharacters = Pattern.compile("[\\u0600-\\u06FF]+");
 	
@@ -146,4 +166,53 @@ public class MasryConsts {
 			return "Words: " + wordsList + " stems: " + stemsList + " count: " + count + " contexts: " + sb.toString() + " flags: unimplemented"; 
 		}
 	}
+	
+	private static class PostfixFemininWord implements VaryWord {
+		public String varyWord(String inputWord, String afix) {
+			if (!(inputWord.endsWith(MasryConsts.H) || inputWord.endsWith(MasryConsts.TA_MARBUTA)))
+				return "";
+			return inputWord.substring(0, inputWord.length() - 1) + afix;
+		}
+
+		@Override
+		public String[] getStopWords(String afix) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+	}
+	
+	private static class AllographEndYa implements VaryWord {
+		public String varyWord(String inputWord, String afix) {
+			if ((afix != MasryConsts.ALIF_MAQSURA) || !(inputWord.endsWith(MasryConsts.YA)))
+				return "";
+			return inputWord.substring(0, inputWord.length() - 1) + afix;
+		}
+
+		@Override
+		public String[] getStopWords(String afix) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+	}
+	
+	private static class AllographEndHa implements VaryWord {
+		public String varyWord(String inputWord, String afix) {
+			if ((afix != MasryConsts.TA_MARBUTA) || !(inputWord.endsWith(MasryConsts.H)))
+				return "";
+			return inputWord.substring(0, inputWord.length() - 1) + afix;
+		}
+
+		@Override
+		public String[] getStopWords(String afix) {
+			String[] result = new String[] {"فية", // fih there is; fiya group
+			}; 
+			Arrays.sort(result);
+			return result;
+		}
+	}
+	
+	public static VaryWord allographEndYa = new MasryConsts.AllographEndYa();
+	public static VaryWord allographEndHa = new MasryConsts.AllographEndHa();
+	public static VaryWord postfixFemininWord = new MasryConsts.PostfixFemininWord();
+
 }

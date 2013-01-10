@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import org.plyjy.factory.PySystemObjectFactory;
 import net.homeunix.siam.stemmer.StemmerI;
 import net.homeunix.siam.wordcounter.TokenAndType;
 import net.homeunix.siam.wordcounter.MasryConsts.WordCounterData;
+import net.homeunix.siam.wordcounter.Run.CollectRemovals.VaryWord;
 import net.homeunix.siam.wordcounter.TokenAndType.TokenType;
 
 /**
@@ -42,8 +44,8 @@ public class Run {
 	
 	public static final String lineSeparator = System.getProperty("line.separator");
 	
-	public static PySystemObjectFactory<StemmerI> isriFactory = new PySystemObjectFactory<StemmerI>(
-            StemmerI.class, "nltk", "ISRIStemmer");
+//	public static PySystemObjectFactory<StemmerI> isriFactory = new PySystemObjectFactory<StemmerI>(
+//            StemmerI.class, "nltk", "ISRIStemmer");
 	
 	/**
 	 * To get a word/frequency map sorted by the frequency of a word this seems to be the most simple solution.
@@ -108,61 +110,105 @@ public class Run {
 		
 		public CollectRemovals(Map<String, WordCounterData> wordCount) {
 			this.wordCount = wordCount;
+			Map<String, String[]> prefixStopWords = new HashMap<String, String[]>();
+			Map<String, String[]> postfixStopWords = new HashMap<String, String[]>();
+			for (int i = 0; i < MasryConsts.masry_prefixes_nouns_stopwords.length; i++)
+				prefixStopWords.put(MasryConsts.masry_prefixes_nouns[i], MasryConsts.masry_prefixes_nouns_stopwords[i]);
+			for (int i = 0; i < MasryConsts.masry_postfixes_nouns_stopwords.length; i++)
+				postfixStopWords.put(MasryConsts.masry_postfixes_nouns[i], MasryConsts.masry_postfixes_nouns_stopwords[i]);
+			this.prefixWordNoun = new PrefixWord(prefixStopWords);
+			this.postfixWordNoun = new PostfixWord(postfixStopWords);
+			prefixStopWords = new HashMap<String, String[]>();
+			postfixStopWords = new HashMap<String, String[]>();			
+			for (int i = 0; i < MasryConsts.masry_prefixes_verbs_stopwords.length; i++)
+				prefixStopWords.put(MasryConsts.masry_prefixes_verbs[i], MasryConsts.masry_prefixes_verbs_stopwords[i]);
+			for (int i = 0; i < MasryConsts.masry_postfixes_verbs_stopwords.length; i++)
+				postfixStopWords.put(MasryConsts.masry_postfixes_verbs[i], MasryConsts.masry_postfixes_verbs_stopwords[i]);
+			this.prefixWordVerb = new PrefixWord(prefixStopWords);
+			this.postfixWordVerb = new PostfixWord(postfixStopWords);
+			prefixStopWords = new HashMap<String, String[]>();
+			postfixStopWords = new HashMap<String, String[]>();
+			for (int i = 0; i < MasryConsts.masry_prefixes_indet_stopwords.length; i++)
+				prefixStopWords.put(MasryConsts.masry_prefixes_indet[i], MasryConsts.masry_prefixes_indet_stopwords[i]);
+			for (int i = 0; i < MasryConsts.masry_postfixes_indet_stopwords.length; i++)
+				postfixStopWords.put(MasryConsts.masry_postfixes_indet[i], MasryConsts.masry_postfixes_indet_stopwords[i]);
+			this.prefixWordIndet = new PrefixWord(prefixStopWords);
+			this.postfixWordIndet = new PostfixWord(postfixStopWords);
+
 		}
 		
 		public interface VaryWord {
+			public String[] getStopWords(String afix);
 			public String varyWord(String inputWord, String afix);
 		}
 		
-		private class PrefixWord implements VaryWord {
-			public String varyWord(String inputWord, String afix) {
+		public class PrefixWord implements VaryWord {
+	    	private Map<String, String[]> stopWords;
+	    	
+	    	PrefixWord(Map<String, String[]> stopWords) {
+	    		this.stopWords = stopWords;
+	    	}
+	    	public String varyWord(String inputWord, String afix) {
 				return afix + inputWord;
 			}
-		}
 
-	    private class PostfixWord implements VaryWord {
-			public String varyWord(String inputWord, String afix) {
-				return inputWord + afix;
-			}
-		}
-		
-		private class PostfixFemininWord implements VaryWord {
-			public String varyWord(String inputWord, String afix) {
-				if (!(inputWord.endsWith(MasryConsts.H) || inputWord.endsWith(MasryConsts.TA_MARBUTA)))
-					return "";
-				return inputWord.substring(0, inputWord.length() - 1) + afix;
-			}
-		}
-		
-		private class AllographEndYa implements VaryWord {
-			public String varyWord(String inputWord, String afix) {
-				if ((afix != MasryConsts.ALIF_MAQSURA) || !(inputWord.endsWith(MasryConsts.YA)))
-					return "";
-				return inputWord.substring(0, inputWord.length() - 1) + afix;
+			@Override
+			public String[] getStopWords(String afix) {
+				String[] result = null;
+				if (stopWords != null)
+					result = stopWords.get(afix);
+				if (result != null) Arrays.sort(result);
+				return result;
 			}
 		}
 
-		private class AllographEndTatweel implements VaryWord {
+	    public class PostfixWord implements VaryWord {
+	    	private Map<String, String[]> stopWords;
+	    	
+	    	PostfixWord(Map<String, String[]> stopWords) {
+	    		this.stopWords = stopWords;
+	    	}
+	    	
 			public String varyWord(String inputWord, String afix) {
-				if ((afix != MasryConsts.TATWEEL) || !(inputWord.length() < 3))
-					return "";
 				return inputWord + afix;
+			}
+
+			@Override
+			public String[] getStopWords(String afix) {
+				String[] result = null;
+				if (stopWords != null)
+					result = stopWords.get(afix);
+				if (result != null) Arrays.sort(result);
+				return result;
 			}
 		}
 		
-		private class AllographEndHa implements VaryWord {
-			public String varyWord(String inputWord, String afix) {
-				if ((afix != MasryConsts.TA_MARBUTA) || !(inputWord.endsWith(MasryConsts.H)))
-					return "";
-				return inputWord.substring(0, inputWord.length() - 1) + afix;
-			}
-		}
+		
 
 		private class AllographAlifHamza implements VaryWord {
 			public String varyWord(String inputWord, String afix) {
 				if ((afix != MasryConsts.ALIF_HAMZA) || !(inputWord.startsWith(MasryConsts.ALIF)))
 					return "";
 				return afix + inputWord.substring(1, inputWord.length());
+			}
+
+			@Override
+			public String[] getStopWords(String afix) {
+				// TODO Auto-generated method stub
+				return null;
+			}
+		}
+		
+		private class AllographEndTatweel implements VaryWord {
+			public String varyWord(String inputWord, String afix) {
+				if ((afix != MasryConsts.TATWEEL))
+					return "";
+				return inputWord + afix;
+			}
+
+			@Override
+			public String[] getStopWords(String afix) {
+				return null;
 			}
 		}
 		
@@ -172,22 +218,33 @@ public class Run {
 					return "";
 				return afix + inputWord.substring(1, inputWord.length());
 			}
+
+			@Override
+			public String[] getStopWords(String afix) {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 		
-		public VaryWord allographEndYa = new AllographEndYa();
-		public VaryWord allographEndHa = new AllographEndHa();
 		public VaryWord allographEndTatweel = new AllographEndTatweel();
 		public VaryWord allographAlifHamza = new AllographAlifHamza();
 		public VaryWord allographAlifHamzaBelow = new AllographAlifHamzaBelow();
-		public VaryWord prefixWord = new PrefixWord();
-		public VaryWord postfixWord = new PostfixWord();
-		public VaryWord postfixFemininWord = new PostfixFemininWord();
+		public VaryWord prefixWordIndet;
+		public VaryWord postfixWordIndet;
+		public VaryWord prefixWordNoun;
+		public VaryWord postfixWordNoun;
+		public VaryWord prefixWordVerb;
+		public VaryWord postfixWordVerb;
 		
 		public <E extends Enum<E> > void collect(Map.Entry<String, WordCounterData> entry, String[] afixes, VaryWord vary, EnumSet<E> markers, Class<E> elementType) {
 			if (entry.getKey().length() < skipShorterThan)
 				return;
+			String[] stopWords = null;
         	for (int i = 0; i < afixes.length; i++) {
+    			stopWords = vary.getStopWords(afixes[i]);
         		String word2 = vary.varyWord(entry.getKey(), afixes[i]);
+        		if (stopWords != null && Arrays.binarySearch(stopWords, word2) > -1)
+        			return;
         		if (word2 != "") {
         			WordCounterData data2 = wordCount.get(word2);
         			if (data2 != null) {
@@ -370,37 +427,60 @@ public class Run {
             		wordCount.put(word, new WordCounterData(context, word));
             }
             
-            StemmerI isri = isriFactory.createObject();
-            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
-            	entry.getValue().stems[0] = isri.stem(entry.getKey()).toArray(entry.getValue().stems[0]);
-            }
+//            StemmerI isri = isriFactory.createObject();
+//            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
+//            	entry.getValue().stems[0] = isri.stem(entry.getKey()).toArray(entry.getValue().stems[0]);
+//            }
 
             CollectRemovals removals = new CollectRemovals(wordCount);
             // Order does matter! TODO: How?
             removals.skipShorterThan = 0;
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
             	removals.collect(entry, MasryConsts.masry_allograph, removals.allographEndTatweel, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
-            	removals.collect(entry, MasryConsts.masry_allograph, removals.allographEndYa, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
-            	removals.collect(entry, MasryConsts.masry_allograph, removals.allographEndHa, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
+            	removals.collect(entry, MasryConsts.masry_allograph, MasryConsts.allographEndYa, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
+            	removals.collect(entry, MasryConsts.masry_allograph, MasryConsts.allographEndHa, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
+            }
+            
+            for (String s1: removals.toRemove)
+            	wordCount.remove(s1);
+            removals.toRemove.clear();
+            
+            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
             	removals.collect(entry, MasryConsts.masry_allograph, removals.allographAlifHamza, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
             	removals.collect(entry, MasryConsts.masry_allograph, removals.allographAlifHamzaBelow, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
             }
+            
+            for (String s1: removals.toRemove)
+            	wordCount.remove(s1);
+            removals.toRemove.clear();
+
+            removals.skipShorterThan = 2;
+
+            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
+            	removals.collect(entry, MasryConsts.masry_prefixes_indet, removals.prefixWordIndet, entry.getValue().preNonMarkersFound, MasryConsts.PreNonMarkers.class);
+            	removals.collect(entry, MasryConsts.masry_prefixes_nouns, removals.prefixWordNoun, entry.getValue().preNounMarkersFound, MasryConsts.PreNounMarkers.class);
+            	removals.collect(entry, MasryConsts.masry_prefixes_verbs, removals.prefixWordVerb, entry.getValue().preVerbMarkersFound, MasryConsts.PreVerbMarkers.class);
+            }
+
+            for (String s1: removals.toRemove)
+            	wordCount.remove(s1);
+            removals.toRemove.clear();
+
+            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
+            	removals.collect(entry, MasryConsts.masry_postfixes_indet, removals.postfixWordIndet, entry.getValue().postNonMarkersFound, MasryConsts.PostNonMarkers.class);
+            	removals.collect(entry, MasryConsts.masry_postfixes_nouns, removals.postfixWordNoun, entry.getValue().postNounMarkersFound, MasryConsts.PostNounMarkers.class);
+            	removals.collect(entry, MasryConsts.masry_postfixes_verbs, removals.postfixWordVerb, entry.getValue().postVerbMarkersFound, MasryConsts.PostVerbMarkers.class);
+            }
+
+            for (String s1: removals.toRemove)
+            	wordCount.remove(s1);
+            removals.toRemove.clear();
+
 //            removals.skipShorterThan = 2;
 //            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
 //               	removals.collect(entry, MasryConsts.masry_feminin_postfixes, removals.postfixFemininWord, entry.getValue().postFemininMakrersFound, MasryConsts.PostFemininMarkers.class);
 //            }
-//            removals.skipShorterThan = 3;
-//            for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
-//            	removals.collect(entry, MasryConsts.masry_prefixes_indet, removals.prefixWord, entry.getValue().preNonMarkersFound, MasryConsts.PreNonMarkers.class);
-//            	removals.collect(entry, MasryConsts.masry_postfixes_indet, removals.postfixWord, entry.getValue().postNonMarkersFound, MasryConsts.PostNonMarkers.class);
-//            	removals.collect(entry, MasryConsts.masry_prefixes_nouns, removals.prefixWord, entry.getValue().preNounMarkersFound, MasryConsts.PreNounMarkers.class);
-//            	removals.collect(entry, MasryConsts.masry_postfixes_nouns, removals.postfixWord, entry.getValue().postNounMarkersFound, MasryConsts.PostNounMarkers.class);
-//            	removals.collect(entry, MasryConsts.masry_prefixes_verbs, removals.prefixWord, entry.getValue().preVerbMarkersFound, MasryConsts.PreVerbMarkers.class);
-//            	removals.collect(entry, MasryConsts.masry_postfixes_verbs, removals.postfixWord, entry.getValue().postVerbMarkersFound, MasryConsts.PostVerbMarkers.class);
-//            }
-            for (String s1: removals.toRemove)
-            	wordCount.remove(s1);
-			
+            			
             Map<String, WordCounterData> fixUps = new HashMap<>();
             // restore end alif maqsura as default for ambigous words.
             for (Iterator<Entry<String, WordCounterData>> iter = wordCount.entrySet().iterator(); iter.hasNext();) {
@@ -441,12 +521,19 @@ public class Run {
             	}
             	if (atts != "") 
             	   System.out.print("\" att=\"" + atts);
-            	System.out.println("\">" + word);
+            	System.out.print("\">" + word);
+
+            	for (String w: data.words) 
+             		System.out.print("<orth>" + w + "</orth>" + lineSeparator);
+
+//				results next to useless
+//            	for (String[] stema: data.stems) 
+//            	   for (String stem: stema){
+//            		System.out.print("<stem>" + stem + "</stem>" + lineSeparator);
+//            	}
+            	
             	StringBuilder sb = new StringBuilder();
-            	for (String[] stema: data.stems) 
-            	   for (String stem: stema){
-            		System.out.print("<stem>" + stem + "</stem>" + lineSeparator);
-            	}
+
             	for (WordCounterData.ContextData foundAmidst: randomSample(data, numberOfSamplesPerToken)) {
             		sb.setLength(0);
             		String s2 = "";
@@ -478,11 +565,16 @@ public class Run {
             	System.out.print("</t>" + lineSeparator);
             	lastWordCount = count;
             }
+            Thread.sleep(100);
        		System.err.println("<comment>These are the " + (xMostFrequentToken - i) + " most frequent token with possble variants.");
        		System.err.println("There were " + (overallTokenCount - displayedTokenSum) + " more token " +
        				"(including those declared unknown by regexp) found in the input text</comment>");
+       		Thread.sleep(100);
             System.out.println("</tokenlist>");
         } catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} finally {
