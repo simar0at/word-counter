@@ -5,3 +5,5 @@ encoding//src/nltk/stem/api.py=utf-8
 encoding//src/nltk/stem/isri.py=utf-8
 encoding/arzwiki-texts.txt=UTF-8
 encoding/out.txt=UTF-8
+encoding/testwords=UTF-8
+encoding/testwords2=UTF8
