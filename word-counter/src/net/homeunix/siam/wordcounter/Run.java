@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2012, Omar Siam. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  I designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 package net.homeunix.siam.wordcounter;
 /**
  * Count words of arz (egyptian arabic) texts like the preprocessed wikipedia, sort the result by frequency of that word.
@@ -31,7 +52,6 @@ import org.plyjy.factory.PySystemObjectFactory;
 import net.homeunix.siam.stemmer.StemmerI;
 import net.homeunix.siam.wordcounter.MasryConsts.IrregularJoin;
 import net.homeunix.siam.wordcounter.TokenAndType;
-import net.homeunix.siam.wordcounter.MasryConsts.WordCounterData;
 import net.homeunix.siam.wordcounter.Run.CollectRemovals.VaryWord;
 import net.homeunix.siam.wordcounter.TokenAndType.TokenType;
 
@@ -50,61 +70,8 @@ public class Run {
 //	public static PySystemObjectFactory<StemmerI> isriFactory = new PySystemObjectFactory<StemmerI>(
 //            StemmerI.class, "nltk", "ISRIStemmer");
 	
-	/**
-	 * To get a word/frequency map sorted by the frequency of a word this seems to be the most simple solution.
-	 * Obviously needs an unsorted key/value map as an input. Sorts by frequency and then alphabetically.
-	 * 
-	 * @author Omar Siam
-	 *
-	 */
-	public static class WordCounterDataValueComp implements Comparator<String>
-	{
-
-    	Map<String, WordCounterData> base;
-    	
-    	public WordCounterDataValueComp(Map<String, WordCounterData> baseMap) {
-    		base = baseMap;
-    	}
-    	
-		@Override
-		public int compare(String o1, String o2) {
-			// Sort the most frequently used first.
-			int countO1 = 0;
-			int countO2 = 0;
-			for (int c: base.get(o1).counts)
-				countO1 += c;
-			for (int c: base.get(o2).counts)
-				countO2 += c;
-			int ret = -Integer.compare(countO1, countO2);
-			// If frequency is the same sort alphabetically ascending
-			if (0 == ret) {
-				ret = o1.compareTo(o2);
-			}
-			return ret;
-		}
-    	
-    }
 	
-	private static final int CONTEXT_LENGTH = MasryConsts.CONTEXT_LENGTH;
-	
-	public static class TokenWithContext {
-		public String word;
-		public String[] context;
-		
-		TokenWithContext(String word, CircularBuffer<TokenAndType> context) {
-			this.word = word;
-			this.context = new String[CONTEXT_LENGTH];
-			for (int i = 0; i < CONTEXT_LENGTH; i++)
-				this.context[i] = context.get(i).token;
-		}
-		
-		public String toString() {
-			StringBuilder sb = new StringBuilder();
-			for (String s: context)
-				sb.append(s);
-			return sb.toString();
-		}
-	}
+	static final int CONTEXT_LENGTH = MasryConsts.CONTEXT_LENGTH;
 	
 	public static class CollectRemovals {
 		public int skipShorterThan = 3;
@@ -329,72 +296,6 @@ public class Run {
 //		return result;
 //	}
 	
-	public static Random rnd = new Random(22);
-	
-	public static List<WordCounterData.ContextData> randomSample(WordCounterData counterData, int m) {
-		rnd = new Random(22);
-		if (counterData.counts.length == 1)
-			return randomSample(counterData.contexts, m);
-		else {
-			long[] ratios = new long[counterData.counts.length];
-			List<WordCounterData.ContextData> result = new ArrayList<WordCounterData.ContextData>();
-			int sum = counterData.getCount();
-			double ratio = 1.0;
-			if (sum > m)
-				ratio = (double)m / (double)sum;
-			for (int i = 0; i < ratios.length; i++)
-				ratios[i] = Math.round((double)counterData.counts[i] * ratio);
-			long ratioSum = 0;
-			for (long r: ratios)
-				ratioSum += r;
-			long biggestR = 0, smallestR = 1;
-			for (int i = 0; i < ratios.length; i++)
-			{
-				biggestR =  ratios[i] > biggestR ? ratios[i]: biggestR;
-				smallestR = ratios[i] > 0 && ratios[i] < smallestR ? ratios[i]: smallestR;
-			}
-			for (int i = 0; i < ratios.length; i++)
-			   if (ratios[i] == biggestR) {
-				   biggestR = i;
-				   break;
-			   }
-			for (int i = 0; i < ratios.length; i++)
-				   if (ratios[i] == smallestR) {
-					   smallestR = i;
-					   break;
-				   }
-			if (ratioSum > m)
-				ratios[(int)biggestR] -= 1;
-			else if (ratioSum < m)
-				ratios[(int)smallestR] += 1;
-			int lastStart = 0;
-			for (int i = 0; i < counterData.counts.length; i++) {
-				int contextLength = counterData.counts[i];
-				result.addAll(randomSample(counterData.contexts.subList(lastStart, lastStart + contextLength - 1), (int)ratios[i]));
-				lastStart += contextLength;
-			}
-			return result;
-		}
-	}
-	
-	public static <T> List<T> randomSample(List<T> items, int m){
-	    ArrayList<T> res = new ArrayList<T>(m);
-	    int visited = 0;
-	    Iterator<T> it = items.iterator();
-	    T item = null;
-	    while (m > 0){
-	    	try {
-	        	item = it.next(); }
-	    	catch (NoSuchElementException nse) {
-	    		break; }
-	        if (rnd.nextDouble() < ((double)m)/(items.size() - visited)){
-	            res.add(item);
-	            m--;
-	        }
-	        visited++;
-	    }
-	    return res;
-	}
 	
 	/**
 	 * Old style procedural program.
@@ -625,7 +526,7 @@ public class Run {
 //               	removals.collect(entry, MasryConsts.masry_feminin_postfixes, removals.postfixFemininWord, entry.getValue().postFemininMakrersFound, MasryConsts.PostFemininMarkers.class);
 //            }
             			
-            Map<String, WordCounterData> fixUps = new HashMap<>();
+            Map<String, WordCounterData> fixUps = new HashMap<String, WordCounterData>();
             // restore end alif maqsura as default for ambigous words.
             for (Iterator<Entry<String, WordCounterData>> iter = wordCount.entrySet().iterator(); iter.hasNext();) {
             	Map.Entry<String, WordCounterData> entry = iter.next();
@@ -639,7 +540,7 @@ public class Run {
             
             // The words are counted, but unsorted. Sort them by copying them to a TreeMap with the
             // special sorting algorithm from above in place.
-            Map<String, WordCounterData> sortedWordCount = new TreeMap<String, WordCounterData>(new WordCounterDataValueComp(wordCount));
+            Map<String, WordCounterData> sortedWordCount = new TreeMap<String, WordCounterData>(new WordCounterData.WordCounterDataValueComp(wordCount));
             sortedWordCount.putAll(wordCount);
             
             // print the x most frequent words
@@ -647,14 +548,15 @@ public class Run {
             int lastWordCount = 0;
             int displayedTokenSum = 0;
 
-        	Map<String, WordCounterData> tempMap = new HashMap<>();
-        	Map<String, WordCounterData> sortedTempMap = new TreeMap<>(new WordCounterDataValueComp(tempMap));
+        	Map<String, WordCounterData> tempMap = new HashMap<String, WordCounterData>();
+        	Map<String, WordCounterData> sortedTempMap = new TreeMap<String, WordCounterData>(new WordCounterData.WordCounterDataValueComp(tempMap));
             for (String word: sortedWordCount.keySet()) {
             	WordCounterData data = wordCount.get(word);
             	int count = 0;
             	for (int c: data.counts)
             		count += c;
-            	if (--i < 1 && count < lastWordCount) {
+            	if (i-- == 0 && count < lastWordCount) {
+            		i++;
              		break;
             	}
             	displayedTokenSum += count;
@@ -675,7 +577,7 @@ public class Run {
             		tempMap.put(data.words[j], new WordCounterData(data.counts[j]));
              	sortedTempMap.putAll(tempMap);
              	for (Map.Entry<String, WordCounterData> entry: sortedTempMap.entrySet())
-            		System.out.print("<orth count=\"" + entry.getValue().counts[0] + "\">" + entry.getKey() + "</orth>" + lineSeparator);
+            		System.out.print("<form count=\"" + entry.getValue().counts[0] + "\">" + entry.getKey() + "</form>" + lineSeparator);
 
 //				results next to useless
 //            	for (String[] stema: data.stems) 
@@ -685,18 +587,17 @@ public class Run {
             	
             	StringBuilder sb = new StringBuilder();
 
-            	for (WordCounterData.ContextData foundAmidst: randomSample(data, numberOfSamplesPerToken)) {
+            	for (WordCounterData.ContextData foundAmidst: WordCounterData.randomSample(data, numberOfSamplesPerToken)) {
             		sb.setLength(0);
             		String s2 = "";
-            		TokenType t2 = TokenType.UNKNOWN;
             		for (int j = 0; j < foundAmidst.context.length; j++) {
             			s2 = foundAmidst.context[j];
             			if (s2 == null) break;
             			switch (foundAmidst.types[j]) {
 						case WORD:
-	            			sb.append("<t>");
+	            			sb.append("<w>");
 	            			sb.append(s2.replaceAll("&", "&amp;").replaceAll("<","&lt;"));
-	            			sb.append("</t>");															
+	            			sb.append("</w>");															
 							break;
 						case DELIMITER:
 	            			sb.append("<s>");
