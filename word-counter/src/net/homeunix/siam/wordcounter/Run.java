@@ -219,7 +219,8 @@ public class Run {
 			@Override
 			public String[] getStopWords(String afix) {
 				String[] result = new String[] {"دة",
-												}; 
+												"وصلة", // wasalaat are links
+												};  
 				Arrays.sort(result);
 				return result;
 			}
