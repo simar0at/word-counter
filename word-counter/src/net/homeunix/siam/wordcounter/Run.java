@@ -158,17 +158,27 @@ public class Run {
 		
 		
 
-		private class AllographAlifHamza implements VaryWord {
-			public String varyWord(String inputWord, String afix) {
-				if ((afix != MasryConsts.ALIF_HAMZA) || !(inputWord.startsWith(MasryConsts.ALIF)))
+		private class AllographAlif implements VaryWord {
+			public String varyWord(String inputWord, String replaceAlifHamza) {
+				if (!(replaceAlifHamza == MasryConsts.ALIF_HAMZA || replaceAlifHamza == MasryConsts.ALIF_HAMZA_BELOW) || !(inputWord.contains(MasryConsts.ALIF_HAMZA) || inputWord.contains(MasryConsts.ALIF_HAMZA_BELOW)))
 					return "";
-				return afix + inputWord.substring(1, inputWord.length());
+				String result = inputWord.replace(replaceAlifHamza, MasryConsts.ALIF);
+				if (result.equals(inputWord))
+					return "";
+				return result;
 			}
 
 			@Override
 			public String[] getStopWords(String afix) {
-				// TODO Auto-generated method stub
-				return null;
+				String[] result = new String[] {"إل",
+												"أل",
+												"أسم", // common error
+												"كأن", // ka'anna vs. kana
+												"كإن", // ka'inna vs. kana
+												"دإ", // typo
+				}; 
+				Arrays.sort(result);
+				return result;
 			}
 		}
 		
@@ -185,19 +195,19 @@ public class Run {
 			}
 		}
 		
-		private class AllographAlifHamzaBelow implements VaryWord {
-			public String varyWord(String inputWord, String afix) {
-				if ((afix != MasryConsts.ALIF_HAMZA_BELOW) || !(inputWord.startsWith(MasryConsts.ALIF)))
-					return "";
-				return afix + inputWord.substring(1, inputWord.length());
-			}
-
-			@Override
-			public String[] getStopWords(String afix) {
-				// TODO Auto-generated method stub
-				return null;
-			}
-		}
+//		private class AllographAlifHamzaBelow implements VaryWord {
+//			public String varyWord(String inputWord, String afix) {
+//				if ((afix != MasryConsts.ALIF_HAMZA_BELOW) || !(inputWord.startsWith(MasryConsts.ALIF)))
+//					return "";
+//				return afix + inputWord.substring(1, inputWord.length());
+//			}
+//
+//			@Override
+//			public String[] getStopWords(String afix) {
+//				// TODO Auto-generated method stub
+//				return null;
+//			}
+//		}
 
 		private class FemininRegularPlurals implements VaryWord {
 			public String varyWord(String inputWord, String afix) {
@@ -208,7 +218,7 @@ public class Run {
 
 			@Override
 			public String[] getStopWords(String afix) {
-				String[] result = new String[] {
+				String[] result = new String[] {"دة",
 												}; 
 				Arrays.sort(result);
 				return result;
@@ -216,8 +226,8 @@ public class Run {
 		}
 		
 		public VaryWord allographEndTatweel = new AllographEndTatweel();
-		public VaryWord allographAlifHamza = new AllographAlifHamza();
-		public VaryWord allographAlifHamzaBelow = new AllographAlifHamzaBelow();
+		public VaryWord allographAlifHamza = new AllographAlif();
+		public VaryWord allographAlifHamzaBelow = new AllographAlif();
 		public VaryWord femininRegularPlurals = new FemininRegularPlurals();
 		public VaryWord prefixWordIndet;
 		public VaryWord postfixWordIndet;
@@ -555,7 +565,7 @@ public class Run {
             	int count = 0;
             	for (int c: data.counts)
             		count += c;
-            	if (i-- == 0 && count < lastWordCount) {
+            	if (i-- <= 0 && count < lastWordCount) {
             		i++;
              		break;
             	}

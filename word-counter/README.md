@@ -27,6 +27,10 @@ project. The results are currently so bad that it is disabled.
 
 Output
 ------
+
+For an input like this:
+ إللى إللي اللى اللي لي لى فى في فيه فية لفي لفى امن من تمن هوى هوي هو
+
 The output is in XML looks sth. like this:
 
 ~~~~~ XML
@@ -43,14 +47,14 @@ The output is in XML looks sth. like this:
 <tic><u>></u><u>></u><u>></u><w>إللى</w><s> </s><w>إللي</w><s> </s><w>اللى</w><s> </s><w>اللي</w><s> </s><w>لي</w><s> </s><w>لى</w><s> </s></tic>
 <tic><u>></u><u>></u><u>></u><u>></u><u>></u><w>إللى</w><s> </s><w>إللي</w><s> </s><w>اللى</w><s> </s><w>اللي</w><s> </s><w>لي</w><s> </s></tic>
 </t>
-<comment>These are the 2 most frequent token with possble variants.
+<comment>These are the 1 most frequent token with possble variants.
 There were 18 more token (including those declared unknown by regexp) found in the input text</comment>
 </tokenlist>
 ~~~~~
 
 Support files
 -------------
-There is a <oXygen/> project and some xquery files which can be used with
+There is an <oXygen/> project and some xquery files which can be used with
 the output of this program.
 
 Legal stuff
