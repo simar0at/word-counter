@@ -1,1 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<tokenlist xmlns="http://www.siam.homeunix.net/tokenlist">
+<comment>Processing text in testwords2 using separator pattern [) ]?(?:(?:&amp;lt)|(?:&amp;gt)|(?:&amp;amp)|(?:[,.%](?!\d))|[-\u06D4\u2013\u2014=|()\{\}\[\]&lt;&gt;\u27E8\u27E9'\u2018\u2019"\u00ab\u00bb\u2039\u203A\u201c\u201d#&amp;/*\u2022;:?\u061F!\u060C\s\u200F\u202E\u202C\u200D])+</comment>
+<comment>Processed 177 token and their delimiters.</comment>
+<t count="31" att="[HAS_ALLOGRAPH_END_YA_ALIF_MAQSURA, HAS_ALLOGRAPH_END_H_TA_MARBUTA, HAS_ALLOGRAPH_TATWEEL][POST_F_TU][PREF_N_LI][PREF_V_A][POST_V_SH, POST_V_I][PREF_I_W, PREF_I_BI][POST_I_I, POST_I_AK_IK, POST_I_KI, POST_I_H, POST_I_HA, POST_I_NA, POST_I_KUM, POST_I_HUM][IRREGULAR]">على<form count="2">ع</form>
+<form count="2">على</form>
+<form count="1">بتعليه</form>
+<form count="1">تعلى</form>
+<form count="1">تعلية</form>
+<form count="1">تعليته</form>
+<form count="1">تعليه</form>
+<form count="1">تعليهم</form>
+<form count="1">عـ</form>
+<form count="1">علية</form>
+<form count="1">عليت</form>
+<form count="1">عليته</form>
+<form count="1">عليش</form>
+<form count="1">عليك</form>
+<form count="1">عليكم</form>
+<form count="1">عليكى</form>
+<form count="1">عليكي</form>
+<form count="1">علينا</form>
+<form count="1">عليه</form>
+<form count="1">عليها</form>
+<form count="1">عليهم</form>
+<form count="1">عليي</form>
+<form count="1">لعلى</form>
+<form count="1">وعلى</form>
+<form count="1">وعلية</form>
+<form count="1">وعليت</form>
+<form count="1">وعليه</form>
+<form count="1">وعليها</form>
+<form count="1">وعليهم</form>
+<tic><s> </s><u>count</u><s>="</s><u>120</u><s>"></s><w>وعلى</w><s>&lt;/</s><u>form</u><s>>
+&lt;</s><u>form</u><s> </s><u>count</u><s>="</s><u>103</u><s>"></s></tic>
+</t>
+<comment>These are the 1 most frequent token with possble variants.
+There were 146 more token (including those declared unknown by regexp [\u0600-\u06FF]+ ) found in the input text</comment>
+</tokenlist>

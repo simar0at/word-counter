@@ -72,6 +72,8 @@ public class Run {
 	
 	
 	static final int CONTEXT_LENGTH = MasryConsts.CONTEXT_LENGTH;
+	static final String SEPARATOR_PATTERN = "[) ]?(?:(?:&lt)|(?:&gt)|(?:&amp)|(?:[,.%](?!\\d))|[-\\u06D4\\u2013\\u2014=|()\\{\\}\\[\\]<>\\u27E8\\u27E9'\\u2018\\u2019\"\\u00ab\\u00bb\\u2039\\u203A\\u201c\\u201d#&/*\\u2022;:?\\u061F!\\u060C\\s\\u200F\\u202E\\u202C\\u200D])+";
+	static final String UKNOWN_PATTERN = "";
 	
 	public static class CollectRemovals {
 		public int skipShorterThan = 3;
@@ -220,6 +222,9 @@ public class Run {
 			public String[] getStopWords(String afix) {
 				String[] result = new String[] {"دة",
 												"وصلة", // wasalaat are links
+												"وفية",
+												"الحية",
+												"حية",
 												};  
 				Arrays.sort(result);
 				return result;
@@ -258,7 +263,7 @@ public class Run {
     			stopWords = vary.getStopWords(afixes[i]);
         		String word2 = vary.varyWord(word, afixes[i]);
         		if (stopWords != null && Arrays.binarySearch(stopWords, word) > -1)
-        			return;
+        			continue;
         		if (word2 != "") {
         			WordCounterData data2 = wordCount.get(word2);
         			if (data2 != null) {
@@ -283,8 +288,6 @@ public class Run {
 		
 		public <E extends Enum<E> > void collectIrregular(Map.Entry<String, WordCounterData> entry, Map<String, String> join, Class<E> elementType) {
 			String word = entry.getKey();
-			if (word.length() < skipShorterThan && !word.equals("ل") && !word.equals("ب"))
-				return;
 			String joinTo = join.get(word);
 			if (null != joinTo) {
     			WordCounterData dataJoinTo = wordCount.get(joinTo);
@@ -336,7 +339,7 @@ public class Run {
             // There are one or more full stops or commas, but only if they are not preceded by a digit.
             // There are one or more dashes, quotation marks, also arabic ones, parentheses, slashes, stars, colons, semicolons or ampersands
             // and Arabic varieties of these as well as spaces and left-to-right-markers.
-            s.useDelimiter(Pattern.compile("[) ]?(?:(?:&lt)|(?:&gt)|(?:&amp)|(?:[,.%](?!\\d))|[-\\u06D4\\u2013\\u2014=|()<>\\u27E8\\u27E9'\\u2018\\u2019\"\\u2039\\u203A\\u201c\\u201d#&/*\\u2022;:?\\u061F!\\u060C\\s\\u200F\\u202E\\u202C\\u200D])+"));
+            s.useDelimiter(Pattern.compile(SEPARATOR_PATTERN));
             Map<String, WordCounterData> wordCount = new LinkedHashMap<String, WordCounterData>(128000);
             
 //            while (s.hasNext()) {
@@ -370,7 +373,7 @@ public class Run {
             
             System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
             System.out.println("<tokenlist xmlns=\"http://www.siam.homeunix.net/tokenlist\">");
-            System.out.println("<comment>Processing text in " + args[0] + "</comment>");
+            System.out.println("<comment>Processing text in " + args[0] + " using separator pattern " + SEPARATOR_PATTERN.replaceAll("&",  "&amp;").replaceAll("<", "&lt;").replaceAll(">",  "&gt;") + "</comment>");
             // the buffer is prefilled so now process the whole text (or some number of words plus delimiters)
             int overallTokenCount = 0;
             TokenAndType tt;
@@ -426,7 +429,7 @@ public class Run {
 
             CollectRemovals removals = new CollectRemovals(wordCount);
             // Order does matter! TODO: How?
-            removals.skipShorterThan = 0;
+            removals.skipShorterThan = 2;
             originalWordCount = WordCounterData.getCount(wordCount, true);
 
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
@@ -447,6 +450,7 @@ public class Run {
             removals.toRemove.clear();
             assert(originalWordCount == WordCounterData.getCount(wordCount, true));
 
+            removals.skipShorterThan = 0;
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
             	removals.collect(entry, MasryConsts.masry_allograph, removals.allographEndTatweel, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
             	removals.collect(entry, MasryConsts.masry_allograph, MasryConsts.allographEndYa, entry.getValue().alloGraphFound, MasryConsts.AlloGraphEnd.class);
@@ -480,7 +484,6 @@ public class Run {
             removals.toRemove.clear();
             assert(originalWordCount == WordCounterData.getCount(wordCount, true));
 
-            //         // TODO: exchange verb, noun: better?
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
             	removals.collect(entry, MasryConsts.masry_prefixes_verbs, removals.prefixWordVerb, entry.getValue().preVerbMarkersFound, MasryConsts.PreVerbMarkers.class);
             	removals.collect(entry, MasryConsts.masry_postfixes_verbs, removals.postfixWordVerb, entry.getValue().postVerbMarkersFound, MasryConsts.PostVerbMarkers.class);
@@ -490,7 +493,8 @@ public class Run {
             	wordCount.remove(s1);
             removals.toRemove.clear();
             assert(originalWordCount == WordCounterData.getCount(wordCount, true));
-            
+
+            // noun AL prefix before noun + verb prefixes LI and A, possible but not meaningful in egyptian arbic
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
             	removals.collect(entry, MasryConsts.masry_prefixes_nouns, removals.prefixWordNoun, entry.getValue().preNounMarkersFound, MasryConsts.PreNounMarkers.class);
             	removals.collect(entry, MasryConsts.masry_postfixes_nouns, removals.postfixWordNoun, entry.getValue().postNounMarkersFound, MasryConsts.PostNounMarkers.class);
@@ -499,7 +503,7 @@ public class Run {
             for (String s1: removals.toRemove.keySet())
             	wordCount.remove(s1);
             removals.toRemove.clear();
-            assert(originalWordCount == WordCounterData.getCount(wordCount, true));
+            assert(originalWordCount == WordCounterData.getCount(wordCount, true));            
             
             for (Map.Entry<String, WordCounterData> entry: wordCount.entrySet()) {
             	removals.collectIrregular(entry, removals.joinMap, MasryConsts.IrregularJoin.class);
@@ -631,7 +635,7 @@ public class Run {
             Thread.sleep(100);
        		System.err.println("<comment>These are the " + (xMostFrequentToken - i) + " most frequent token with possble variants.");
        		System.err.println("There were " + (overallTokenCount - displayedTokenSum) + " more token " +
-       				"(including those declared unknown by regexp) found in the input text</comment>");
+       				"(including those declared unknown by regexp " + MasryConsts.someArabicCharacters.pattern() + " ) found in the input text</comment>");
        		Thread.sleep(100);
             System.out.println("</tokenlist>");
         } catch (IOException e) {

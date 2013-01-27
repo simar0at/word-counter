@@ -147,7 +147,7 @@ public class WordCounterData {
 		this.words = Arrays.copyOf(words, this.words.length + data.words.length);
 		this.counts = Arrays.copyOf(counts, this.counts.length + data.counts.length); 
 		this.stems = Arrays.copyOf(stems, this.stems.length + data.stems.length);
-		for (int i = 0; i < data.words.length; i++) {
+		for (int i = 0; i < data.words.length; i++) {			
 			this.words[oldLength + i] = data.words[i];
 			this.stems[oldLength + i] = data.stems[i];
 			this.counts[oldLength + i] = data.counts[i];
